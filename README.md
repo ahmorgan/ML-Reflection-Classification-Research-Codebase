@@ -8,3 +8,5 @@ Text classification – the automatic pairing of text with labels – has proven
 
 
 ![conceptualizingcobalt_48x36 (1)](https://github.com/user-attachments/assets/d3616a0f-46f8-4b0c-b29a-97a81b2ffbc9)
+
+![1731715583413](https://github.com/user-attachments/assets/819f9954-bef7-4a78-82bc-7fe8876715f6)
