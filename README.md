@@ -3,10 +3,10 @@
 This repository contains all code created for the above project. I could not include the train/test datasets I used for SetFit/GPT-4o or the raw data I used for train/test dataset construction for research ethics purposes.
 
 Dependencies required (latest versions if not specified otherwise):
-SetFit - setfit ver 1.0.3, optuna, numpy, sklearn \n
-GPT-4o - openai, numpy, sklearn \n
-Consensus Data Preprocessor - numpy, pandas, openpyxl \n
-Data Visualization - matplotlib \n
+SetFit - setfit ver 1.0.3, optuna, numpy, sklearn |
+GPT-4o - openai, numpy, sklearn |
+Consensus Data Preprocessor - numpy, pandas, openpyxl |
+Data Visualization - matplotlib |
 
 Abstract:
 
