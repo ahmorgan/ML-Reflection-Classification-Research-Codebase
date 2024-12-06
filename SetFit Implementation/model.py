@@ -69,10 +69,11 @@ def hp_space(trial: Trial):
 
 def main():
     # Multi-label text classification using Setfit
-
-    # merge array of zeroes and raw data from data folder into correctly formatted files which can be encoded
-    # and which the model can be trained/tested on
     # loosely followed https://github.com/NielsRogge/Transformers-Tutorials/blob/master/BERT/Fine_tuning_BERT_(and_friends)_for_multi_label_text_classification.ipynb
+
+    # Instructions: create a folder called "data-splits" containing "setfit-dataset-train.csv" and setfit-dataset-test.csv", which are generated from the Dataset
+    # Construction script
+    # Uncomment hyperparameter search code block and comment TrainingArguments code block and "args=args" to run a hyperparameter search
 
     # Datasets are generated using the consensus data parser script
 
@@ -138,7 +139,7 @@ def main():
     )
 
     print("Training...")
-    # optimizing sentence transformer learning rate and num of epochs
+    # optimizing sentence transformer learning rate and num of epochs with hyperparameter search
     """
     best_run = trainer.hyperparameter_search(
         # compute_objective is the overall accuracy of all labels
