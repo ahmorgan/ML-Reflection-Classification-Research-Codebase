@@ -81,7 +81,7 @@ def prompt_model(refs, num_preds, temperature=None):
     return llm_classif
 
 
-def trial(llm_classifications):
+def trial(llm_classifications, num_preds):
     print("Encoding classifications...")
     # encode gpt responses to create a confusion matrix out of them
     gpt_preds_enc = []
@@ -120,7 +120,7 @@ def trial(llm_classifications):
     pred = np.array(gpt_preds_enc)  # size num_predictions
 
     # only first num_predictions predictions (true is every true prediction by default)
-    true = true[:150]
+    true = true[:num_preds]
 
     print(f"True values:\n{true}")
     print(f"Predictions:\n{pred}")
@@ -147,9 +147,9 @@ def trial(llm_classifications):
             break
     accuracy = 0.0
     for label in labels:
-        # 100 is the number of reflections used in evaluation
-        # acc = num_of_correct_classifications / 100
-        accuracy += (trial_result[f"{label}-tp"] + trial_result[f"{label}-tn"]) / 150
+        # num_preds is the number of reflections used in evaluation
+        # acc = num_of_correct_classifications / num_preds
+        accuracy += (trial_result[f"{label}-tp"] + trial_result[f"{label}-tn"]) / num_preds
     accuracy /= len(labels)
     trial_result.update({"accuracy": accuracy})
 
@@ -159,6 +159,14 @@ def trial(llm_classifications):
 
 
 def main():
+    # Instructions: alter the "labels" List at the top of this file as necessary
+    # ensure that gpt_reflections.csv (from the Dataset Construction code) is in the same directory as main.py
+    # ensure that a file called gpt_test.csv is as well -- this file should consist of just the labels (not including
+    # the reflection text) assigned to the reflections from gpt_reflections.csv by our human labelers
+    # last, adjust num_preds, the number of classifications to make, which is useful for quick experiments
+
+    num_preds = 150
+    
     # minor data preprocessing
     # iterate through reflections, concatenate each question with each student sub-response into a string that represents the full reflection
     with open("gpt_reflections.csv", "r", encoding="utf-8") as gpt:
@@ -175,9 +183,9 @@ def main():
 
     # will be of shape {temperature: resulting_metrics)
     hp_search = {}
-    # for j in range(1, 11):
-    classifications = prompt_model(response_prompts, num_preds=150, temperature=0.5)
-    hp_search.update({f"{0.5}": trial(classifications)})
+    # for j in range(1, 11): # uncomment to conduct a "hyperparameter search"
+    classifications = prompt_model(response_prompts, num_preds, temperature=0.5)
+    hp_search.update({f"{0.5}": trial(classifications, num_preds)})
 
     result = {}
     max_acc = 0.0
