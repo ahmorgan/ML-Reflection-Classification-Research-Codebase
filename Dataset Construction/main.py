@@ -234,6 +234,14 @@ def sanitize_gpt_reflections(reflections):
 
 
 def main():
+    # Instructions: identify what labels should be kept in the final dataset by altering "exclude_labels"
+    # and/or "include_other" (which includes the "Other" label class)
+    # Ensure that this folder -> https://drive.google.com/drive/folders/10g5msqE4sELGakqICucO9sVuxlXoIggM?usp=drive_link
+    # exists as "raw_data" in the same directory as main.py and organize.py
+    # Refer to the top of this file for instructions on minor manual dataset cleaning to be done first
+    # This code will output a multi-label dataset for each sub-dataset (each D-ESX-X dataset) as well as
+    # "gpt_reflections.csv", which is used in my GPT-4o implementation as part of the prompt
+    
     # Support for excluding labels in the final generated multilabel training dataset
     exclude_labels = ["None", "MySQL", "Quizzes ", "Understanding requirements and instructions ",
                       "Course Structure and Materials", "Group Work", "IDE and Package Installation",
