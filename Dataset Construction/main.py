@@ -1,4 +1,4 @@
-# DATASET CONTRAPTION: goes from unprocessed annotation data to multi-label dataset
+# DATASET PREPROCESSOR: goes from unprocessed annotation data to multi-label dataset
 # for training a model for multi-label classification
 
 # ********BEFORE RUNNING MAIN DO THIS*************:
