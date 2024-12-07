@@ -13,22 +13,26 @@ import torch
 # that label. Repeat process for each label. Hopefully, with enough predictions
 # for each class, a minimally noisy confusion matrix can be created for each label
 def compute_metrics(y_pred, y_true) -> dict[str, float]:
-    with open("raw_setfit_preds.csv", "w", encoding="utf-8", newline='') as rsp:
-        c_w = csv.writer(rsp)
-        for i in range(0, 150):
-            row = []
-            for j in range(0, 4):
-                row.append(y_pred[i][j].item())
-            c_w.writerow(row)
-    # confusion_matrices is a list of n-dimensional numpy arrays
-    # list is of size num_labels
-    confusion_matrices = multilabel_confusion_matrix(y_true, y_pred)
     # initialize labels
     labels = ["Python and Coding",
               "Github",
               "Assignments",
               "Time Management and Motivation",
               ]
+
+    # save the raw predictions made by the model
+    with open("raw_setfit_preds.csv", "w", encoding="utf-8", newline='') as rsp:
+        c_w = csv.writer(rsp)
+        for i in range(0, len(y_true)):
+            row = []
+            for j in range(0, len(labels)):
+                row.append(y_pred[i][j].item())
+            c_w.writerow(row)
+            
+    # confusion_matrices is a list of n-dimensional numpy arrays
+    # list is of size num_labels
+    confusion_matrices = multilabel_confusion_matrix(y_true, y_pred)
+    
     result = {}
     x = 0
     for matrix in confusion_matrices:
@@ -44,9 +48,9 @@ def compute_metrics(y_pred, y_true) -> dict[str, float]:
             break
     accuracy = 0.0
     for label in labels:
-        # 150 is the number of reflections used in evaluation
-        # acc = num_of_correct_classifications / 150
-        accuracy += (result[f"{label}-tp"] + result[f"{label}-tn"]) / 150
+        # len(y_true) is the number of reflections used in evaluation
+        # acc = num_of_correct_classifications / num_reflections
+        accuracy += (result[f"{label}-tp"] + result[f"{label}-tn"]) / len(y_true)
     accuracy /= len(labels)
     result.update({"accuracy": accuracy})
     return result
@@ -71,9 +75,9 @@ def main():
     # Multi-label text classification using Setfit
     # loosely followed https://github.com/NielsRogge/Transformers-Tutorials/blob/master/BERT/Fine_tuning_BERT_(and_friends)_for_multi_label_text_classification.ipynb
 
-    # Instructions: create a folder called "data-splits" containing "setfit-dataset-train.csv" and setfit-dataset-test.csv", which are generated from the Dataset
-    # Construction script
+    # Instructions: create a folder called "data-splits" containing "setfit-dataset-train.csv" and setfit-dataset-test.csv", which are generated from the Dataset Construction script
     # Uncomment hyperparameter search code block and comment TrainingArguments code block and "args=args" to run a hyperparameter search
+    # Last, change the labels List in compute_metrics if running experiments with different labels than "Python and Coding", "GitHub", "Assignments", and "Time Management"
 
     # Datasets are generated using the consensus data parser script
 
