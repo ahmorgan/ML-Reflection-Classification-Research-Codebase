@@ -59,7 +59,8 @@ def main():
 
     top_n_agreement_level_categories_to_include = 1
 
-    # TODO - See if I can just calculate MASI distance on sets of labels strings rather than encoded integers to simplify things
+    # TODO - See if I can just calculate MASI distance on sets of label strings rather than encoded integers to simplify things
+    # (though string or encoded int it makes little to no difference)
     dist_to_ref = {}
     with open("label_sets.csv", "r", encoding="utf-8") as ls:
         c_r = csv.reader(ls)
