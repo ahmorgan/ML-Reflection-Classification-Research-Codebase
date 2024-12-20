@@ -7,6 +7,7 @@ SetFit - setfit ver 1.0.3, optuna, numpy, sklearn |
 GPT-4o - openai, numpy, sklearn |
 Consensus Data Preprocessor - numpy, pandas, openpyxl |
 Data Visualization - matplotlib |
+Disagreement Filter - No third-party dependencies required
 
 Abstract:
 
