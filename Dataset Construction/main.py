@@ -17,6 +17,7 @@ from collections import Counter
 import organize
 from pathlib import Path
 import os, os.path
+import copy
 
 
 # there might be a cleaner way to do the following that doesn't involve
@@ -90,11 +91,14 @@ def process(files, output_file, include_other, dataset_name):
     # which is added in a special case
     reflections = []
 
+    refs_labelsets = {}
+    
     # populate matrix
     for file in files:
         with open(file, "r", encoding="utf-8") as annotation:
             c_r = csv.reader(annotation)
             c_r = list(c_r)
+            string_c_r = list(copy.deepcopy(c_r))
             # replace issue strings with mapped integers
             for i in range(0, len(c_r)):
                 if c_r[i][1] in issue2integer.keys() and c_r[i][1] != "Other":
@@ -107,7 +111,9 @@ def process(files, output_file, include_other, dataset_name):
             c_r.append(["", -1])  # stopping point, so the last reflection is included in loop
             current_reflection = c_r[0][0]
             reflection_labels = []  # n labels chosen by annotator for that reflection
+            reflection_labels_str = []  # unencoded label strings with no "other" abstraction
             i = 0
+            count = 0
             for row in c_r:
                 # row[0] == reflection text, row[1] == label
                 if current_reflection != row[0]:
@@ -116,14 +122,22 @@ def process(files, output_file, include_other, dataset_name):
                     if current_reflection not in data.keys():
                         data.update({current_reflection: reflection_labels})  # new reflection_labels array
                         top_n_labels.update({current_reflection: [i]})
+                        refs_labelsets.update({current_reflection: [copy.deepcopy(reflection_labels_str)]})  # list of lists of label sets
+                        # refs_labelsets needed to calculate inter-annotator disagreement
                     else:
                         data[current_reflection].extend(reflection_labels)
                         top_n_labels[current_reflection].append(i)
+                        refs_labelsets[current_reflection].append(reflection_labels_str)
                     i = 0
                     reflection_labels = []
+                    reflection_labels_str = []
                     current_reflection = row[0]
                 reflection_labels.append(row[1])
+                if count < len(string_c_r):
+                    reflection_labels_str.append(string_c_r[count][1])
                 i += 1
+                count += 1
+                
     # reflections contains an empty string (the stopping point), remove it
     reflections = reflections[:len(reflections)-1]
 
@@ -183,7 +197,11 @@ def process(files, output_file, include_other, dataset_name):
 
     df.to_csv(output_file, index=False)
 
-    return reflections_new
+    # return new reflections for sanitize_gpt_reflections() and the the label sets
+    # and their corresponding reflections
+    package = [reflections_new, list(refs_labelsets.items())]
+
+    return package
 
 
 # Remove reflections from gpt_reflections.csv that do not correspond to the excluded labels
@@ -277,6 +295,7 @@ def main():
         # into a multi-label training dataset
 
     full_dataset = []
+    label_sets = []
     # for each sub directory in data (one for each annotation set), generate a multi-label training dataset
     reflections_sanitized = []  # every reflection used, given label exclusion constraint
     for sub_dir in os.listdir("data"):
@@ -285,16 +304,30 @@ def main():
         output_file = "consensus-" + sub_dir + ".csv"
         # process() generates multi-label training dataset for each ESU/P dataset
         # and then returns list of reflections for that dataset
-        for ref in process(files, output_file=output_file, include_other=include_other, dataset_name=sub_dir):
-            reflections_sanitized.append(ref)
+        package = process(files=files, output_file=output_file, include_other=include_other, dataset_name=sub_dir)
+        # package is the [0] the list of reflections to undergo further preprocessing for GPT code
+        # and [1] the label sets and their corresponding reflections for calculating Krippendorff's alpha
+        reflections_sanitized.extend([ref for ref in package[0]])
+        for ref_label_pair in package[1]:
+            if ref_label_pair[0] in reflections_sanitized:
+                label_sets.append(ref_label_pair)  # label sets for calculating Krippendorff's alpha
         with open(output_file, 'r', encoding="utf-8") as of:
             c_r = csv.reader(of)
-            for row in c_r:
+            for row in list(c_r)[1:]:  # don't include the header
                 full_dataset.append(row)
 
+    # Consensus datasets (D-ESP-4-1, D-ESP4-2, ...) concatenated into one csv
     with open("full_dataset.csv", 'w', encoding="utf-8", newline="") as fd:
         c_w = csv.writer(fd)
+        header = list(integer2issue.values())
+        header.append("text")
+        c_w.writerow(header)
         c_w.writerows(full_dataset)
+
+    # Label sets for each dataset concatenated into one csv
+    with open("label_sets.csv", "w", encoding="utf-8", newline="") as l_s:
+        c_w = csv.writer(l_s)
+        c_w.writerows(label_sets)
 
 
     # gpt_reflections is every reflection in raw_data divided in it's requisite sub-parts by default
