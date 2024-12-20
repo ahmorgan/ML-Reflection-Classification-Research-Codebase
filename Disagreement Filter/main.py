@@ -44,8 +44,7 @@ def masi_distance(label1, label2):
     return (len_intersection / float(len_union)) * m
 
 
-# What do it do:
-# Calculate the agreement for each reflection based on label_sets.csv (see below) and filter out reflections
+# Calculates the agreement for each reflection based on label_sets.csv (see below) and filter out reflections
 # from a provided dataset with 
 def main():
     # Instructions: place a file called "full_dataset.csv" containing all of your reflections and a file
@@ -59,7 +58,8 @@ def main():
     # in the final dataset. TODO - change this from top categories to a float agreement threshold
 
     top_n_agreement_level_categories_to_include = 1
-    
+
+    # TODO - See if I can just calculate MASI distance on sets of labels strings rather than encoded integers to simplify things
     dist_to_ref = {}
     with open("label_sets.csv", "r", encoding="utf-8") as ls:
         c_r = csv.reader(ls)
