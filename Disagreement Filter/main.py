@@ -94,9 +94,6 @@ def main():
 
     dists = list(dist_to_ref.keys())
     dists.sort()
-
-    for item in dist_to_ref.items():
-        print(item)
         
     top_n_agreement_level_categories_to_include *= -1
     top_ref_dists = [dist for dist in dists[:top_n_agreement_level_categories_to_include]]
