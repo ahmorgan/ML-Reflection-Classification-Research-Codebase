@@ -44,7 +44,22 @@ def masi_distance(label1, label2):
     return (len_intersection / float(len_union)) * m
 
 
+# What do it do:
+# Calculate the agreement for each reflection based on label_sets.csv (see below) and filter out reflections
+# from a provided dataset with 
 def main():
+    # Instructions: place a file called "full_dataset.csv" containing all of your reflections and a file
+    # called "label_sets.csv" containing all of your reflections with a list of label sets into the same
+    # directory as main.py before running main
+    # see my MLCompare journal for examples of full_dataset.csv and label_sets.csv or email me for help
+    # if you can't run the code at amorga94@charlotte.edu
+    # ***Use my dataset generation code under Dataset Construction to create a full_dataset.csv
+    # and label_sets.csv for any labels you wish
+    # Last, alter top_n_agreement_categories_to_include to change the agreement threshold for inclusion
+    # in the final dataset. TODO - change this from top categories to a float agreement threshold
+
+    top_n_agreement_level_categories_to_include = 1
+    
     dist_to_ref = {}
     with open("label_sets.csv", "r", encoding="utf-8") as ls:
         c_r = csv.reader(ls)
@@ -81,12 +96,13 @@ def main():
 
     for item in dist_to_ref.items():
         print(item)
-
-    top_five_ref_dists = [dist for dist in dists[-7:-2]]
+        
+    top_n_agreement_level_categories_to_include *= -1
+    top_ref_dists = [dist for dist in dists[:top_n_agreement_level_categories_to_include]]
     desired_reflections = []
-    for d in top_five_ref_dists:
+    for d in top_ref_dists:
         desired_reflections.extend(dist_to_ref[d])
-    print(top_five_ref_dists)
+    print(top_ref_dists)
 
     with open("low_disagreement_dataset.csv", "w", encoding="utf-8", newline="") as low_d:
         c_w = csv.writer(low_d)
