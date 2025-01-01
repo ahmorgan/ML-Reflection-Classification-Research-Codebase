@@ -1,25 +1,6 @@
 import csv
 from itertools import combinations
 
-label_encodings = {
-    "None": 0,
-    "Python and Coding": 1,
-    "Github": 2,
-    "MySQL": 3,
-    "Assignments ": 4,
-    "Quizzes ": 5,
-    "Understanding requirements and instructions ": 6,
-    "Learning New Material": 7,
-    "Course Structure and Materials": 8,
-    "Time Management and Motivation": 9,
-    "Group Work": 10,
-    "IDE and Package Installation": 11,
-    "API": 12,
-    "FastAPI": 12,
-    "Personal Issue": 13,
-    "Other": 14
-}
-
 
 # Fixed version of NLTK's masi_distance()
 # MASI = jaccard_distance * m, the original NLTK implementation
@@ -45,7 +26,7 @@ def masi_distance(label1, label2):
 
 
 # Calculates the agreement for each reflection based on label_sets.csv (see below) and filter out reflections
-# from a provided dataset with 
+# from a provided dataset with
 def main():
     # Instructions: place a file called "full_dataset.csv" containing all of your reflections and a file
     # called "label_sets.csv" containing all of your reflections with a list of label sets into the same
@@ -54,37 +35,27 @@ def main():
     # if you can't run the code at amorga94@charlotte.edu
     # ***Use my dataset generation code under Dataset Construction to create a full_dataset.csv
     # and label_sets.csv for any labels you wish
-    # Last, alter top_n_agreement_categories_to_include to change the agreement threshold for inclusion
-    # in the final dataset. TODO - change this from top categories to a float agreement threshold
+    # Last, alter threshold to change the agreement threshold for inclusion
+    # in the final dataset.
 
-    top_n_agreement_level_categories_to_include = 1
+    threshold = 0.70
 
-    # TODO - See if I can just calculate MASI distance on sets of label strings rather than encoded integers to simplify things
-    # (though string or encoded int it makes little to no difference)
     dist_to_ref = {}
     with open("label_sets.csv", "r", encoding="utf-8") as ls:
         c_r = csv.reader(ls)
         for elem in list(c_r):  # elem is tuple of the reflection-label set pair
             # Encode string labels back to encoded integers
-            labels_enc = []
-            for label_list in eval(elem[1]):  # label_sets.csv stored the lists as strings, convert
-                # to python lists using eval()
-                labels_enc.append([])
-                for label in label_list:
-                    if label in list(label_encodings.keys()):
-                        labels_enc[len(labels_enc)-1].append(label_encodings[label])
-                    else:
-                        labels_enc[len(labels_enc)-1].append(14)
+            labels = eval(elem[1])
 
             # calculating reflection agreement by taking the averaged masi distance across
             # all possible unique subsets of the labels for some reflection
             dist = 0
-            all_combinations = list(combinations([i for i in range(0, len(labels_enc))], 2))
+            all_combinations = list(combinations([i for i in range(0, len(labels))], 2))
             for combin in all_combinations:
-                dist += masi_distance(set(labels_enc[combin[0]]), set(labels_enc[combin[1]]))
+                dist += masi_distance(set(labels[combin[0]]), set(labels[combin[1]]))
             dist = dist / len(all_combinations)
 
-            print(f"{dist} for label set: {labels_enc}")
+            print(f"{dist} for label set: {labels}")
 
             # closed addressing collision handling is just easier to work with
             if dist not in dist_to_ref.keys():
@@ -94,13 +65,15 @@ def main():
 
     dists = list(dist_to_ref.keys())
     dists.sort()
-        
-    top_n_agreement_level_categories_to_include *= -1
-    top_ref_dists = [dist for dist in dists[:top_n_agreement_level_categories_to_include]]
+    print(f"\nAll agreement measuresments found: {dists}")
+    # filter out distances less than the threshold
+    dists = [dist for dist in dists if dist >= threshold]
+
     desired_reflections = []
-    for d in top_ref_dists:
+    for d in dists:
         desired_reflections.extend(dist_to_ref[d])
-    print(top_ref_dists)
+    print(f"\nAll existing agreement measurements meeting threshold {threshold}: {dists}")
+    print("Writing all reflections meeting threshold to low_disagreement_dataset.csv...")
 
     with open("low_disagreement_dataset.csv", "w", encoding="utf-8", newline="") as low_d:
         c_w = csv.writer(low_d)
@@ -110,6 +83,8 @@ def main():
             for row in c_r[1:]:
                 if row[4] in desired_reflections:
                     c_w.writerow(row)
+
+    print("File written.")
 
 
 if __name__ == "__main__":
