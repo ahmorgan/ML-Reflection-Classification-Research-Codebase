@@ -62,11 +62,13 @@ def main():
     # if you can't run the code at amorga94@charlotte.edu
     # ***Use my dataset generation code under Dataset Construction to create a full_dataset.csv
     # and label_sets.csv for any labels you wish
-    # Last, alter threshold to change the agreement threshold for inclusion
+    # Alter threshold to change the agreement threshold for inclusion
     # in the final dataset.
+    # Last, alter single_label to filter out reflections with multiple labels as determined by
+    # single_label_filter() above
 
     threshold = 0.70
-    single_label = True
+    single_label = False
 
     dist_to_ref = {}
     with open("label_sets.csv", "r", encoding="utf-8") as ls:
@@ -76,8 +78,6 @@ def main():
         # this is useful and necessary for running experiments with FastFit
         if single_label:
             c_r = single_label_filter(list(c_r))
-
-        print(c_r)
 
         for elem in list(c_r):  # elem is a tuple containing the reflection-labelset pair
             labels = eval(elem[1])
