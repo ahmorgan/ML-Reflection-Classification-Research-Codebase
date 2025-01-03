@@ -115,7 +115,7 @@ def main():
         with open("full_dataset.csv", "r", encoding="utf-8") as full_d:
             c_r = list(csv.reader(full_d))
             labels = [lb for lb in c_r[0][:-1]]  # every label column except "text" for single label dataset
-            print(labels)
+            print(f"Labels found: {labels}")
             if single_label:
                 c_w.writerow(["text", "label"])  # write header row
                 for row in c_r[1:]:
