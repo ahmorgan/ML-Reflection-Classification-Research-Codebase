@@ -2,6 +2,33 @@ import csv
 from itertools import combinations
 
 
+# filters out reflections that, by consensus of number of labels, have only
+# one label. That is, the average label set length is one
+# example: three annotators provide the label sets, [Python and Coding], [Python and Coding],
+# [Python and Coding, GitHub] -- the average label set length is (1+1+2)/3 = 4/3 = rounded to 1
+# ***NOTE: in this method, we don't care what the actual label is (i.e. it is OK if the three annotators each provided
+# three single labels that are all different) because low disagreement reflections (or those with
+# varying label sets) will get filtered out anyway
+def single_label_filter(dataset):
+    ret_dataset = []
+
+    # dataset is a list of tuples which each contain a reflection and its corresponding label sets
+    # both items in the tuple are strings since dataset was read from a csv file
+    for row in dataset:
+        labels = eval(row[1])
+        avg_len = 0
+        for label_set in labels:
+            avg_len += len(label_set)
+        avg_len = round(avg_len / len(labels))
+
+        # the assumption is made that if the avg_len rounds to one,
+        # the reflection is likely a single-label reflection
+        if avg_len == 1:
+            ret_dataset.append(row)
+
+    return ret_dataset
+
+
 # Fixed version of NLTK's masi_distance()
 # MASI = jaccard_distance * m, the original NLTK implementation
 # had (1-jaccard) * m (jaccard = cardinality(intersection)/cardinality(union))
@@ -39,12 +66,20 @@ def main():
     # in the final dataset.
 
     threshold = 0.70
+    single_label = True
 
     dist_to_ref = {}
     with open("label_sets.csv", "r", encoding="utf-8") as ls:
         c_r = csv.reader(ls)
-        for elem in list(c_r):  # elem is tuple of the reflection-label set pair
-            # Encode string labels back to encoded integers
+
+        # filter out reflections that (based on the consensus length) don't have only one label
+        # this is useful and necessary for running experiments with FastFit
+        if single_label:
+            c_r = single_label_filter(list(c_r))
+
+        print(c_r)
+
+        for elem in list(c_r):  # elem is a tuple containing the reflection-labelset pair
             labels = eval(elem[1])
 
             # calculating reflection agreement by taking the averaged masi distance across
@@ -55,7 +90,7 @@ def main():
                 dist += masi_distance(set(labels[combin[0]]), set(labels[combin[1]]))
             dist = dist / len(all_combinations)
 
-            print(f"{dist} for label set: {labels}")
+            # print(f"{dist} for label set: {labels}")
 
             # closed addressing collision handling is just easier to work with
             if dist not in dist_to_ref.keys():
@@ -79,10 +114,24 @@ def main():
         c_w = csv.writer(low_d)
         with open("full_dataset.csv", "r", encoding="utf-8") as full_d:
             c_r = list(csv.reader(full_d))
-            c_w.writerow(c_r[0])  # write header row
-            for row in c_r[1:]:
-                if row[4] in desired_reflections:
-                    c_w.writerow(row)
+            labels = [lb for lb in c_r[0][:-1]]  # every label column except "text" for single label dataset
+            print(labels)
+            if single_label:
+                c_w.writerow(["text", "label"])  # write header row
+                for row in c_r[1:]:
+                    if row[-1] in desired_reflections:
+                        # search for the index of the "1" in the multi-label dataset and
+                        # find the corresponding label in the labels array using that index
+                        i = 0
+                        while row[i] == "0":
+                            i += 1
+                        # row[-1] is the reflection text and labels[i] is the label
+                        c_w.writerow([row[-1], labels[i]])
+            else:
+                c_w.writerow(c_r[0])  # write header row
+                for row in c_r[1:]:
+                    if row[-1] in desired_reflections:
+                        c_w.writerow(row)
 
     print("File written.")
 
