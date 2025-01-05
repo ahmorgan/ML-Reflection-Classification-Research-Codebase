@@ -27,9 +27,9 @@ issue2integer = {
     "Python and Coding": 1,
     "Github": 2,
     "MySQL": 3,
-    "Assignments ": 4,
-    "Quizzes ": 5,
-    "Understanding requirements and instructions ": 6,
+    "Assignments": 4,
+    "Quizzes": 5,
+    "Understanding requirements and instructions": 6,
     "Learning New Material": 7,
     "Course Structure and Materials": 8,
     "Time Management and Motivation": 9,
@@ -37,7 +37,9 @@ issue2integer = {
     "IDE and Package Installation": 11,
     "API": 12,
     "FastAPI": 12,
-    "Personal Issue": 13
+    "Personal Issue": 13,
+    "HTML": 14,
+    "SDLC": 15,
 }
 
 integer2issue = {
@@ -45,9 +47,9 @@ integer2issue = {
     1: "Python and Coding",
     2: "Github",
     3: "MySQL",
-    4: "Assignments ",
-    5: "Quizzes ",
-    6: "Understanding requirements and instructions ",
+    4: "Assignments",
+    5: "Quizzes",
+    6: "Understanding requirements and instructions",
     7: "Learning New Material",
     8: "Course Structure and Materials",
     9: "Time Management and Motivation",
@@ -55,8 +57,11 @@ integer2issue = {
     11: "IDE and Package Installation",
     12: "API",
     13: "Personal Issue",
-    14: "Other"
+    14: "HTML",
+    15: "SDLC",
 }
+
+primary_labels = []
 
 
 # METHOD PARAMETERS
@@ -64,7 +69,7 @@ integer2issue = {
 # output_file: name to assign to file which contains the final consensus dataset
 # include_other: whether or not to include the "other" column. If not, any reflection with the "other"
 #   label will remain in the dataset, just stripped of the "other" label
-def process(files, output_file, include_other, dataset_name):
+def process(files, output_file, dataset_name):
     print(f"Processing files in {dataset_name}...\n")
     # CONSENSUS LABELING METHODOLOGY
     # **************************************
@@ -92,7 +97,7 @@ def process(files, output_file, include_other, dataset_name):
     reflections = []
 
     refs_labelsets = {}
-    
+
     # populate matrix
     for file in files:
         with open(file, "r", encoding="utf-8") as annotation:
@@ -102,12 +107,11 @@ def process(files, output_file, include_other, dataset_name):
             # replace issue strings with mapped integers
             for i in range(0, len(c_r)):
                 if c_r[i][1] in issue2integer.keys() and c_r[i][1] != "Other":
-                    c_r[i][1] = issue2integer[c_r[i][1]]
+                    c_r[i][1] = issue2integer[c_r[i][1].strip()]
                 else:
-                    c_r[i][1] = max(list(issue2integer.values()))  # "other" issues will be the next consecutive integer
-                    if not include_other:
-                        c_r[i][1] += 1
-                    # (14 in case of no excluded labels)
+                    c_r[i][1] = max(list(issue2integer.values()))+1  # issues in exclude_labels will be mapped to next consecutive integer
+                    # and be removed later
+                    # (16 in case of no excluded labels)
             c_r.append(["", -1])  # stopping point, so the last reflection is included in loop
             current_reflection = c_r[0][0]
             reflection_labels = []  # n labels chosen by annotator for that reflection
@@ -137,7 +141,7 @@ def process(files, output_file, include_other, dataset_name):
                     reflection_labels_str.append(string_c_r[count][1])
                 i += 1
                 count += 1
-                
+
     # reflections contains an empty string (the stopping point), remove it
     reflections = reflections[:len(reflections)-1]
 
@@ -145,10 +149,9 @@ def process(files, output_file, include_other, dataset_name):
     for key in data.keys():
         # https://stackoverflow.com/questions/1518522/find-the-most-common-element-in-a-list
         offset = 0
-        if not include_other:
-            while 1+max(list(issue2integer.values())) in data[key]:
-                data[key].remove(1+max(list(issue2integer.values())))  # remove all integers mapping to "other"
-                offset += 1  # since one label is removed from data, remove one label from top_n_labels
+        while 1+max(list(issue2integer.values())) in data[key]:
+            data[key].remove(1+max(list(issue2integer.values())))  # remove all integers mapping to an excluded label
+            offset += 1  # since one label is removed from data, remove one label from top_n_labels
         # choose the top n labels from the list of labels, where n is the mean number of labels for that reflection
         top_n_labels[key] = round((sum(top_n_labels[key])-offset) / len(top_n_labels[key]))
         # only exception is to not allow for zero labels, which can happen when the other column is excluded
@@ -178,7 +181,7 @@ def process(files, output_file, include_other, dataset_name):
             i += 1
             continue
         for val in label_set:
-            dataset[i][issue2integer[val]] = 1
+            dataset[i][issue2integer[val.strip()]] = 1
         i += 1
 
     # reflections_new is every reflection that has at least one label in dataset
@@ -260,10 +263,10 @@ def main():
     # "gpt_reflections.csv", which is used in my GPT-4o implementation as part of the prompt
     
     # Support for excluding labels in the final generated multilabel training dataset
-    exclude_labels = ["None", "MySQL", "Quizzes ", "Understanding requirements and instructions ", "Learning New Material",
-                      "Course Structure and Materials", "Group Work", "IDE and Package Installation",
-                      "API", "FastAPI", "Personal Issue"]
-    include_other = False
+    exclude_labels = ["Assignments", "Quizzes", "Learning New Material", "Understanding requirements and instructions", "Personal Issue"]
+    # TODO write in support for secondary labels
+    label_category = "Primary"  # CAUTION: as of 1/4 I have not written in full support for the secondary label category -- COMING SOON
+
     if exclude_labels:
         # remove unwanted labels
         for label in exclude_labels:
@@ -277,21 +280,31 @@ def main():
         i = 0
         in_2_is_changes = []
         for key in issue2integer.keys():
-            issue2integer.update({key: i})
-            in_2_is_changes.append({i: key})
-            i += 1
+            # special case: a lot of people put "FastAPI" instead of "API" as their label
+            # for issues with fastapi so "FastAPI" and "API" both map to the same integer
+            # but map back to just "API"
+            if key == "FastAPI":
+                issue2integer.update({key: i-1})
+            else:
+                issue2integer.update({key: i})
+                in_2_is_changes.append({i: key})
+                i += 1
         integer2issue.clear()
         for change in in_2_is_changes:
             integer2issue.update(change)
-    next_num = 1+max(list(issue2integer.values()))
-    if include_other:
-        issue2integer.update({"Other": next_num})
-        integer2issue.update({next_num: "Other"})
+
+    next_available_num = max(list(issue2integer.values())) + 1
+    if label_category == "Primary":
+        issue2integer.update({"Other Primary": next_available_num})
+        integer2issue.update({next_available_num: "Other Primary"})
+    else:
+        issue2integer.update({"Other Secondary": next_available_num})
+        integer2issue.update({next_available_num: "Other Secondary"})
 
     if not os.path.isdir("data"):
         os.makedirs("data")
     if len(os.listdir("data")) == 0:
-        organize.organize()  # wrangle the raw datasets into a format that can be further processed
+        organize.organize(label_category=label_category)  # wrangle the raw datasets into a format that can be further processed
         # into a multi-label training dataset
 
     full_dataset = []
@@ -304,7 +317,7 @@ def main():
         output_file = "consensus-" + sub_dir + ".csv"
         # process() generates multi-label training dataset for each ESU/P dataset
         # and then returns list of reflections for that dataset
-        package = process(files=files, output_file=output_file, include_other=include_other, dataset_name=sub_dir)
+        package = process(files=files, output_file=output_file, dataset_name=sub_dir)
         # package is the [0] the list of reflections to undergo further preprocessing for GPT code
         # and [1] the label sets and their corresponding reflections for calculating Krippendorff's alpha
         reflections_sanitized.extend([ref for ref in package[0]])
@@ -337,4 +350,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
 
