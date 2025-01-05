@@ -1,14 +1,22 @@
 # DATASET PREPROCESSOR: goes from unprocessed annotation data to multi-label dataset
 # for training a model for multi-label classification
 
-# ********BEFORE RUNNING MAIN DO THIS*************:
-# pre-pre-pre-processing to do first: get rid of "ID" column in each excel in raw_data
-# and remove annotation sets that are not complete
-# also make sure that column g is the issue column in every dataset.
-# also make sure that none of the "issue" labels are null (either fix or remove them if so)
-# also make sure none of the cells in any of the header rows are null.
-# i could probably do these programmatically but the datasets are so messy it's
-# just less of a pain to do these first steps manually
+# Instructions for raw_data excel file specifications (to be done manually):
+# for all datasets:
+#    get rid of the "ID" column in each excel in raw_data
+#    and remove annotation sets that are not complete
+# for D-ESA4-1:
+#    the above steps plus, depending on whether you want
+#    to generate a dataset with primary or secondary labels,
+#    remove either the primary or secondary label column
+# After that, additionally,
+#    Make sure that column g / column 5 is the label column in every dataset.
+#    Make sure that none of the issue label cells are null (either fix or remove them if so)
+#    Make sure none of the cells in any of the header rows are null.
+# the input dataset in raw_data should mirror the template:
+#    columns 0 -> 4: reflection sub-parts column (i.e. column 0 is "How do you feel about this class?",
+#    column 1 is "Explain why you feel this way", etc.)
+#    column 5: issue label column
 
 import csv
 import pandas as pd
@@ -253,14 +261,18 @@ def sanitize_gpt_reflections(reflections):
 
 
 def main():
-    # Instructions: identify what labels should be kept in the final dataset by altering "exclude_labels"
-    # and/or "include_other" (which includes the "Other" label class)
-    # Ensure that this folder -> https://drive.google.com/drive/folders/10g5msqE4sELGakqICucO9sVuxlXoIggM?usp=drive_link
-    # exists as "raw_data" in the same directory as main.py and organize.py
-    # Also, create an empty directory called "data"
-    # Refer to the top of this file for instructions on minor manual dataset cleaning to be done first
+    # Instructions: identify what labels should be kept in the final dataset by altering "exclude_labels".
+    # Alter label_category, depending on whether you want a dataset with primary or secondary labels.
+    # Ensure that the raw_data_primary_labels folder from my MLCompare research journal
+    # exists in the same directory as main.py and organize.py and is named "raw_data".
+    # I plan to make a similar raw_data_secondary_labels folder for the secondary labels soon, as well as add support
+    # for generating datasets that use the secondary labels.
+    # There are also instructions for the specifications that the files in raw_data should meet at the top of this file.
     # This code will output a multi-label dataset for each sub-dataset (each D-ESX-X dataset) as well as
     # "gpt_reflections.csv", which is used in my GPT-4o implementation as part of the prompt
+    # You will also get full_dataset.csv, which is each sub-dataset concatenated, and label_sets.csv,
+    # which is each reflection paired with the corresponding label sets assigned by each annotator as a 2d list of strings
+    # Email me at amorga94@charlotte.edu with any questions or issues.
     
     # Support for excluding labels in the final generated multilabel training dataset
     exclude_labels = ["Assignments", "Quizzes", "Learning New Material", "Understanding requirements and instructions", "Personal Issue"]
