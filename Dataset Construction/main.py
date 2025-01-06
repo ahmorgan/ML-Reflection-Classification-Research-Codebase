@@ -262,7 +262,9 @@ def sanitize_gpt_reflections(reflections):
 
 def main():
     # Instructions: identify what labels should be kept in the final dataset by altering "exclude_labels".
-    # Alter label_category, depending on whether you want a dataset with primary or secondary labels.
+    # Alter label_category, depending on whether your raw data contains primary or secondary labels. This
+    # parameter is necessary because there are two "Other" categories, one for primary labels and one for
+    # secondary labels, and I need to know if the data comes from primary or secondary labels.
     # Ensure that the raw_data_primary_labels folder from my MLCompare research journal
     # exists in the same directory as main.py and organize.py and is named "raw_data".
     # I plan to make a similar raw_data_secondary_labels folder for the secondary labels soon, as well as add support
