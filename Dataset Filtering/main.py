@@ -1,5 +1,8 @@
+import copy
 import csv
 from itertools import combinations
+from nltk.metrics.agreement import AnnotationTask
+from nltk.metrics import binary_distance
 
 
 # filters out reflections that, by consensus of number of labels, have only
@@ -52,6 +55,33 @@ def masi_distance(label1, label2):
     return (len_intersection / float(len_union)) * m
 
 
+def nltk_annotation_formatting(dataset):
+    ret_dataset = []
+    i = 0
+    coder_id = 0
+    for row in dataset:
+        for ann_set in eval(row[1]):
+            annotator = "coder_" + str(coder_id)
+            ret_dataset.append((annotator, i, frozenset(ann_set)))
+            coder_id += 1
+        i += 1
+        coder_id = 0
+    return ret_dataset
+
+
+# This function calculates and prints the Krippendorff's alpha value for the
+# previous unfiltered dataset and the newly filtered dataset to validate that
+# filtering the dataset improved the inter-annotator agreement
+def validation(prev_dataset, new_dataset):
+    formatted_annts_new = nltk_annotation_formatting(new_dataset)
+    formatted_annts_prev = nltk_annotation_formatting(prev_dataset)
+
+    task_prev = AnnotationTask(data=formatted_annts_prev, distance=binary_distance)
+    task_new = AnnotationTask(data=formatted_annts_new, distance=binary_distance)
+
+    return task_prev.alpha(), task_new.alpha()
+
+
 # Calculates the agreement for each reflection based on label_sets.csv (see below) and filter out reflections
 # from a provided dataset with
 def main():
@@ -62,30 +92,36 @@ def main():
     # if you can't run the code at amorga94@charlotte.edu
     # ***Use my dataset generation code under Dataset Construction to create a full_dataset.csv
     # and label_sets.csv for any labels you wish
-    # Alter threshold to change the agreement threshold for inclusion
+    # Last, alter threshold to change the agreement threshold for inclusion
     # in the final dataset.
-    # Last, alter single_label to filter out reflections with multiple labels as determined by
-    # single_label_filter() above
 
-    threshold = 0.70
-    single_label = False
+    threshold = 0.7
+    single_label = True
 
+    # Users can ignore everything else below
+    unfiltered_dataset = None
+
+    # dist_to_ref will map agreement values to lists of reflections, i.e. every reflection
+    # with a 1.0 (perfect) agreement is placed into the 1.0 agreement list bucket in the dictionary
     dist_to_ref = {}
     with open("label_sets.csv", "r", encoding="utf-8") as ls:
-        c_r = csv.reader(ls)
+        c_r = list(csv.reader(ls))
+        unfiltered_dataset = copy.deepcopy(c_r)  # copy of the original dataset is saved for later validation
 
         # filter out reflections that (based on the consensus length) don't have only one label
         # this is useful and necessary for running experiments with FastFit
         if single_label:
-            c_r = single_label_filter(list(c_r))
+            c_r = single_label_filter(c_r)
 
-        for elem in list(c_r):  # elem is a tuple containing the reflection-labelset pair
+        for elem in c_r:  # elem is a tuple containing the reflection-labelset pair
             labels = eval(elem[1])
 
             # calculating reflection agreement by taking the averaged masi distance across
-            # all possible unique subsets of the labels for some reflection
+            # all possible unique subsets of the labels for every reflection
             dist = 0
             all_combinations = list(combinations([i for i in range(0, len(labels))], 2))
+            if not all_combinations:
+                continue
             for combin in all_combinations:
                 dist += masi_distance(set(labels[combin[0]]), set(labels[combin[1]]))
             dist = dist / len(all_combinations)
@@ -110,6 +146,9 @@ def main():
     print(f"\nAll existing agreement measurements meeting threshold {threshold}: {dists}")
     print("Writing all reflections meeting threshold to low_disagreement_dataset.csv...")
 
+    filtered_dataset = []
+
+    # write the newly filtered dataset
     with open("low_disagreement_dataset.csv", "w", encoding="utf-8", newline="") as low_d:
         c_w = csv.writer(low_d)
         with open("full_dataset.csv", "r", encoding="utf-8") as full_d:
@@ -133,7 +172,22 @@ def main():
                     if row[-1] in desired_reflections:
                         c_w.writerow(row)
 
+            # filter label_sets.csv as well to run validation (below)
+            for row in unfiltered_dataset:
+                if row[0] in desired_reflections:
+                    filtered_dataset.append(row)  # filtered dataset is the same as low_disagreement_dataset.csv,
+                    # just formatted the same way as label_sets.csv and always multi-label
+                    # this is necessary because we need access to every set of labels from every annotator.
+                    # filtered_dataset is multi-label regardless of whether single_label is true because
+                    # it wouldn't make sense to compare the krippendorff of a single-label dataset to a multi-label one
+                    # and the starting dataset is always multi-label (and we are comparing against the starting dataset)
+
     print("File written.")
+
+    alpha_prev, alpha_new = validation(unfiltered_dataset, filtered_dataset)
+
+    print(f"Validation: Krippendorff's alpha of previous multi-label dataset: {alpha_prev}")
+    print(f"Validation: Krippendorff's alpha of new multi-label dataset: {alpha_new}")
 
 
 if __name__ == "__main__":
