@@ -1,14 +1,14 @@
 # Codebase for my contributions for Fall 2024 OUR Research Scholars + Spring 2025 Research Assistantship
 # Fall Poster: Comparative Analysis of Resource-Efficient Multi-Label Text Classification Methods: GPT-4o vs fine-tuning with SetFit
 # Spring paper: "A Comparison of Machine Learning Approaches for Student Challenge Classification" By Sandra Wiktor, Dr. Mohsen Dorodchi, Eunyoung Kim, Andrew Morgan, Nicole Wiktor, Frank Garcia
-This repository contains all code created for the above project. I could not include the train/test datasets I used for SetFit/GPT-4o or the raw data I used for train/test dataset construction for research ethics purposes.
+This repository contains all code created for the above projects. I could not include the train/test datasets I used for SetFit/GPT-4o or the raw data I used for train/test dataset construction for research ethics purposes.
 
 Dependencies required (latest versions if not specified otherwise):
 SetFit - setfit ver 1.0.3, optuna, numpy, sklearn |
 GPT-4o - openai, numpy, sklearn |
-Consensus Data Preprocessor - numpy, pandas, openpyxl |
+Dataset Construction - numpy, pandas, openpyxl |
 Data Visualization - matplotlib |
-Disagreement Filter - No third-party dependencies required
+Disagreement Filter - NLTK
 
 Abstract:
 
