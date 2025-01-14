@@ -1,22 +1,14 @@
 # DATASET PREPROCESSOR: goes from unprocessed annotation data to multi-label dataset
 # for training a model for multi-label classification
 
-# Instructions for raw_data excel file specifications (to be done manually):
-# for all datasets:
-#    get rid of the "ID" column in each excel in raw_data
-#    and remove annotation sets that are not complete
-# for D-ESA4-1:
-#    the above steps plus, depending on whether you want
-#    to generate a dataset with primary or secondary labels,
-#    remove either the primary or secondary label column
-# After that, additionally,
-#    Make sure that column g / column 5 is the label column in every dataset.
-#    Make sure that none of the issue label cells are null (either fix or remove them if so)
-#    Make sure none of the cells in any of the header rows are null.
-# the input dataset in raw_data should mirror the template:
-#    columns 0 -> 4: reflection sub-parts column (i.e. column 0 is "How do you feel about this class?",
-#    column 1 is "Explain why you feel this way", etc.)
-#    column 5: issue label column
+# ********BEFORE RUNNING MAIN DO THIS*************:
+# pre-pre-pre-processing to do first: get rid of "ID" column in each excel in raw_data
+# and remove annotation sets that are not complete
+# also make sure that column g is the issue column in every dataset.
+# also make sure that none of the "issue" labels are null (either fix or remove them if so)
+# also make sure none of the cells in any of the header rows are null.
+# i could probably do these programmatically but the datasets are so messy it's
+# just less of a pain to do these first steps manually
 
 import csv
 import pandas as pd
@@ -104,9 +96,14 @@ def process(files, output_file, dataset_name):
     # which is added in a special case
     reflections = []
 
+    # reflections mapped to label sets instead of just a list of labels
+    # i.e. if the original raw data had two annotators who gave a reflection [Python and Coding, GitHub] and
+    # [Python and Coding] respectively, refs_labelsets preserves the individual label sets rather than concatenating
+    # both label sets provided by the two annotators
     refs_labelsets = {}
 
-    # populate matrix
+    # Iterate through all annotation files, encode the labels to integers, and concatenate the single-label rows into
+    # label lists for each reflection
     for file in files:
         with open(file, "r", encoding="utf-8") as annotation:
             c_r = csv.reader(annotation)
@@ -120,7 +117,7 @@ def process(files, output_file, dataset_name):
                     c_r[i][1] = max(list(issue2integer.values()))+1  # issues in exclude_labels will be mapped to next consecutive integer
                     # and be removed later
                     # (16 in case of no excluded labels)
-            c_r.append(["", -1])  # stopping point, so the last reflection is included in loop
+            c_r.append(["", -1])  # dummy list entry, so the last reflection is included in the loop below
             current_reflection = c_r[0][0]
             reflection_labels = []  # n labels chosen by annotator for that reflection
             reflection_labels_str = []  # unencoded label strings with no "other" abstraction
@@ -129,13 +126,13 @@ def process(files, output_file, dataset_name):
             for row in c_r:
                 # row[0] == reflection text, row[1] == label
                 if current_reflection != row[0]:
-                    reflections.append(current_reflection)  # current_reflection replaced, add to reflections
                     # create a new entry in the dictionary if one doesn't exist for the current reflection
                     if current_reflection not in data.keys():
                         data.update({current_reflection: reflection_labels})  # new reflection_labels array
                         top_n_labels.update({current_reflection: [i]})
                         refs_labelsets.update({current_reflection: [copy.deepcopy(reflection_labels_str)]})  # list of lists of label sets
                         # refs_labelsets needed to calculate inter-annotator disagreement
+                        reflections.append(current_reflection)  # current_reflection replaced, add to reflections
                     else:
                         data[current_reflection].extend(reflection_labels)
                         top_n_labels[current_reflection].append(i)
@@ -149,9 +146,6 @@ def process(files, output_file, dataset_name):
                     reflection_labels_str.append(string_c_r[count][1])
                 i += 1
                 count += 1
-
-    # reflections contains an empty string (the stopping point), remove it
-    reflections = reflections[:len(reflections)-1]
 
     # resolve label lists to consensus label list for each reflection
     for key in data.keys():
@@ -174,6 +168,7 @@ def process(files, output_file, dataset_name):
                 data[key].append(c[i][0])
             for j in range(0, len(data[key])):
                 data[key][j] = integer2issue[data[key][j]]
+        # if the reflection corresponding to data[key] contains only excluded reflections, mark it with a -1
         else:
             data[key] = [-1]
 
@@ -185,6 +180,7 @@ def process(files, output_file, dataset_name):
     # populate final dataset with the consensus labels
     i = 0
     for label_set in data.values():
+        # case where all the labels are in exclude_labels, do not include in final dataset
         if label_set[0] == -1:
             i += 1
             continue
@@ -208,7 +204,7 @@ def process(files, output_file, dataset_name):
 
     df.to_csv(output_file, index=False)
 
-    # return new reflections for sanitize_gpt_reflections() and the the label sets
+    # return new reflections for sanitize_gpt_reflections() and the label sets
     # and their corresponding reflections
     package = [reflections_new, list(refs_labelsets.items())]
 
@@ -260,26 +256,60 @@ def sanitize_gpt_reflections(reflections):
     # questions to each sub-response included
 
 
+# Test method to make sure that full_dataset.csv and label_sets.csv contain the same reflections and labels
+def validate_datasets():
+    full = []
+    label_sets = []
+    with open("full_dataset.csv", "r", encoding="utf-8") as full:
+        c_r = csv.reader(full)
+        full = list(c_r)
+    with open("label_sets.csv", "r", encoding="utf-8") as l_sets:
+        c_r = csv.reader(l_sets)
+        label_sets = list(c_r)
+
+    assert len(full)-1 == len(label_sets), "full_dataset.csv and label_sets.csv different lengths!"
+
+    for i in range(1, len(full)):
+        assert full[i][-1] == label_sets[i-1][0], f"Mismatched reflection found at index {i}!"
+
+    # check if the consensus labels were calculated correctly
+    for i in range(0, len(label_sets)):
+        # recalculate consensus labels for each reflection -- reminder: take the avg_len most common
+        # labels from each list of labels, where avg_len is the average length of the label set
+        # (e.g. if annotator one put 3 labels and annotator two put 1 label, the avg_len would be
+        # (3+1)/2 rounded which is 2
+
+        label_strs = eval(label_sets[i][1])
+        # only include a label if it's not in exclude_labels, and by extension in issue2integer.keys()
+        for j in range(0, len(label_strs)):
+            label_strs[j] = [label for label in label_strs[j] if label in list(issue2integer.keys())]
+
+        avg_len = 0
+        for l_set in label_strs:
+            avg_len += len(l_set)
+        avg_len = round(avg_len / len(label_strs))
+        # beefy list comprehension below flattens the 2d list of label sets into one list of labels
+        label_strs = [label for label_list in label_strs for label in label_list]
+        counter = Counter(label_strs).most_common(avg_len)
+        consensus_labels_encoded = [issue2integer[counter[i][0]] for i in range(0, len(counter))]
+        for label_enc in consensus_labels_encoded:
+            assert full[i+1][label_enc] == "1", f"Consensus label mismatch at reflection number {i}!"
+
+
 def main():
-    # Instructions: identify what labels should be kept in the final dataset by altering "exclude_labels".
-    # Alter label_category, depending on whether your raw data contains primary or secondary labels. This
-    # parameter is necessary because there are two "Other" categories, one for primary labels and one for
-    # secondary labels, and I need to know if the data comes from primary or secondary labels.
-    # Ensure that the raw_data_primary_labels folder from my MLCompare research journal
-    # exists in the same directory as main.py and organize.py and is named "raw_data".
-    # I plan to make a similar raw_data_secondary_labels folder for the secondary labels soon, as well as add support
-    # for generating datasets that use the secondary labels.
-    # There are also instructions for the specifications that the files in raw_data should meet at the top of this file.
+    # Instructions: identify what labels should be kept in the final dataset by altering "exclude_labels"
+    # and/or "include_other" (which includes the "Other" label class)
+    # Ensure that this folder -> https://drive.google.com/drive/folders/10g5msqE4sELGakqICucO9sVuxlXoIggM?usp=drive_link
+    # exists as "raw_data" in the same directory as main.py and organize.py
+    # Also, create an empty directory called "data"
+    # Refer to the top of this file for instructions on minor manual dataset cleaning to be done first
     # This code will output a multi-label dataset for each sub-dataset (each D-ESX-X dataset) as well as
     # "gpt_reflections.csv", which is used in my GPT-4o implementation as part of the prompt
-    # You will also get full_dataset.csv, which is each sub-dataset concatenated, and label_sets.csv,
-    # which is each reflection paired with the corresponding label sets assigned by each annotator as a 2d list of strings
-    # Email me at amorga94@charlotte.edu with any questions or issues.
     
     # Support for excluding labels in the final generated multilabel training dataset
     exclude_labels = ["Assignments", "Quizzes", "Learning New Material", "Understanding requirements and instructions", "Personal Issue"]
     # TODO write in support for secondary labels
-    label_category = "Primary"  # CAUTION: as of 1/4 I have not written in full support for the secondary label category -- COMING SOON
+    label_category = "Primary"  # CAUTION: as of 1/14 I have not written in full support for the secondary label category -- COMING SOON
 
     if exclude_labels:
         # remove unwanted labels
@@ -329,15 +359,19 @@ def main():
         path = "data/" + sub_dir
         files = Path(path).glob("*")  # glob() mentioned
         output_file = "consensus-" + sub_dir + ".csv"
+
         # process() generates multi-label training dataset for each ESU/P dataset
         # and then returns list of reflections for that dataset
         package = process(files=files, output_file=output_file, dataset_name=sub_dir)
+
         # package is the [0] the list of reflections to undergo further preprocessing for GPT code
         # and [1] the label sets and their corresponding reflections for calculating Krippendorff's alpha
         reflections_sanitized.extend([ref for ref in package[0]])
         for ref_label_pair in package[1]:
             if ref_label_pair[0] in reflections_sanitized:
                 label_sets.append(ref_label_pair)  # label sets for calculating Krippendorff's alpha
+
+        # concatenate the datasets for each D-ESX-X dataset into one csv file full_dataset.csv
         with open(output_file, 'r', encoding="utf-8") as of:
             c_r = csv.reader(of)
             for row in list(c_r)[1:]:  # don't include the header
@@ -356,14 +390,14 @@ def main():
         c_w = csv.writer(l_s)
         c_w.writerows(label_sets)
 
-
     # gpt_reflections is every reflection in raw_data divided in it's requisite sub-parts by default
     # based on reflections_sanitized which has been molded in accordance with the label exclusions,
     sanitize_gpt_reflections(reflections_sanitized)
 
+    # test method that ensures that full_dataset.csv and label_sets.csv contain the same reflections
+    # can throw AssertionError
+    validate_datasets()
+
 
 if __name__ == "__main__":
     main()
-
-
-
