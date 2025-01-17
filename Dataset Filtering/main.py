@@ -85,16 +85,21 @@ def validation(prev_dataset, new_dataset):
 # Calculates the agreement for each reflection based on label_sets.csv (see below) and filter out reflections
 # from a provided dataset with
 def main():
-    # Instructions: place a file called "full_dataset.csv" containing all of your reflections and a file
+    # Instructions: place a file called "full_dataset.csv" containing your multi-label dataset and a file
     # called "label_sets.csv" containing all of your reflections with a list of label sets into the same
-    # directory as main.py before running main
-    # see my MLCompare journal for examples of full_dataset.csv and label_sets.csv or email me for help
-    # if you can't run the code at amorga94@charlotte.edu
-    # ***Use my dataset generation code under Dataset Construction to create a full_dataset.csv
+    # directory as main.py before running main.
+    #
+    # ***You can use my dataset generation code under Dataset Construction to create a full_dataset.csv
     # and label_sets.csv for any labels you wish
-    # You can alter threshold to change the agreement threshold for inclusion
+    # ***Alternatively, you can use the pre-generated full_dataset.csv and label_sets.csv in my research
+    # journal. Download Primary Labels/Multi-label Dataset and Reflections + Label Sets For Calculating Agreement
+    # from my Artifacts section and use them as full_dataset.csv and label_sets.csv respectively. These
+    # datasets include only reflections using the primary labels, and they include reflections from
+    # all of our D-ESX-X datasets from the Summer, Fall, and Winter.
+    #
+    # You can alter the threshold variable to change the agreement threshold for inclusion
     # in the final dataset.
-    # Last, change single_label to false to generate a multi-label dataset -- else, the code
+    # Last, you can change single_label to false to generate a multi-label dataset -- else, the code
     # will generate a dataset only containing reflections with one consensus label
 
     threshold = 0.7
