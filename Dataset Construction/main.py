@@ -300,8 +300,8 @@ def main():
     # Instructions: identify what labels should be kept in the final dataset by altering "exclude_labels"
     # Ensure that this folder -> https://drive.google.com/drive/folders/10g5msqE4sELGakqICucO9sVuxlXoIggM?usp=drive_link
     # exists and is named "raw_data" in the same directory as main.py and organize.py before running the code.
+    # If you use your own raw data, refer to the top of this file for instructions on minor manual dataset cleaning to be done first.
     #
-    # Refer to the top of this file for instructions on minor manual dataset cleaning to be done first
     # This code will output a multi-label dataset for each sub-dataset (each D-ESX-X dataset), as well
     # as full_dataset.csv and label_sets.csv, which should be used in the Dataset Filtering code. 
     # full_dataset.csv is all of the sub-datasets concatenated together, while label_sets.csv is all of
