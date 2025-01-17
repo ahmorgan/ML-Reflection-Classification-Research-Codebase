@@ -298,13 +298,18 @@ def validate_datasets():
 
 def main():
     # Instructions: identify what labels should be kept in the final dataset by altering "exclude_labels"
-    # and/or "include_other" (which includes the "Other" label class)
     # Ensure that this folder -> https://drive.google.com/drive/folders/10g5msqE4sELGakqICucO9sVuxlXoIggM?usp=drive_link
-    # exists as "raw_data" in the same directory as main.py and organize.py
-    # Also, create an empty directory called "data"
+    # exists and is named "raw_data" in the same directory as main.py and organize.py before running the code.
+    #
     # Refer to the top of this file for instructions on minor manual dataset cleaning to be done first
-    # This code will output a multi-label dataset for each sub-dataset (each D-ESX-X dataset) as well as
-    # "gpt_reflections.csv", which is used in my GPT-4o implementation as part of the prompt
+    # This code will output a multi-label dataset for each sub-dataset (each D-ESX-X dataset), as well
+    # as full_dataset.csv and label_sets.csv, which should be used in the Dataset Filtering code. 
+    # full_dataset.csv is all of the sub-datasets concatenated together, while label_sets.csv is all of
+    # the reflections from full_dataset.csv except with the label sets from each annotator instead of the
+    # consensus labels. You can ignore gpt_reflections.csv, which I used over the Fall for experiments with GPT-4o.
+    # gpt_reflections.csv is just all of the reflections divided into sub-reflections (i.e. a new entry in the csv for
+    # each student response to the "How are you feeling about this class?", "What issues are you having with this class?",
+    # header questions). Including the header questions in my prompts to GPT-4o improved its results. 
     
     # Support for excluding labels in the final generated multilabel training dataset
     exclude_labels = ["Assignments", "Quizzes", "Learning New Material", "Understanding requirements and instructions", "Personal Issue"]
