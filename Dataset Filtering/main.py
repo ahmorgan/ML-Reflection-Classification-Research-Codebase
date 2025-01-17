@@ -92,8 +92,10 @@ def main():
     # if you can't run the code at amorga94@charlotte.edu
     # ***Use my dataset generation code under Dataset Construction to create a full_dataset.csv
     # and label_sets.csv for any labels you wish
-    # Last, alter threshold to change the agreement threshold for inclusion
+    # You can alter threshold to change the agreement threshold for inclusion
     # in the final dataset.
+    # Last, change single_label to false to generate a multi-label dataset -- else, the code
+    # will generate a dataset only containing reflections with one consensus label
 
     threshold = 0.7
     single_label = True
