@@ -4,8 +4,10 @@ import random
 import csv
 import torch
 import numpy as np
-from sklearn.metrics import confusion_matrix, f1_score
+from sklearn.metrics import confusion_matrix, classification_report, f1_score, ConfusionMatrixDisplay
+from matplotlib import pyplot as plt
 import optuna
+import os
 
 
 def create_splits(shot):
@@ -64,18 +66,33 @@ def compute_metrics(p) -> dict[str, float]:
 
     references = p.label_ids
 
-    matrix = confusion_matrix(predictions, references, labels=[i for i in range(0, max(max(predictions), max(references))+1)])
-    f1 = f1_score(predictions, references, average="macro")
+    labels = ["API", 'Course Structure and Materials', 'Github', 'Group Work', 'MySQL', 'No Issue',
+              'Python and Coding', 'Time Management and Motivation']
 
-    id_to_label = ["API", 'Course Structure and Materials', 'Github', 'Group Work', 'MySQL', 'No Issue',
-                   'Python and Coding', 'Time Management and Motivation']
+    matrix = confusion_matrix(predictions, references, labels=[i for i in range(0, max(references)+1)])
+    report = classification_report(predictions, references, labels=[i for i in range(0, max(references)+1)], target_names=labels, output_dict=True)
+    f1 = f1_score(predictions, references, average="macro")
 
     with open("results.csv", "w", encoding="utf-8", newline="") as results:
         c_w = csv.writer(results)
-        c_w.writerow(id_to_label)
+        c_w.writerow(labels)
         for row in matrix:
             c_w.writerow(row)
-        c_w.writerow(["F1 score:", str(f1)])
+        c_w.writerow([])
+        for label in report.keys():
+            c_w.writerow([label])
+            if type(report[label]) != dict:
+                if type(report[label]) == float:
+                    report[label] = [report[label]]
+                c_w.writerow(report[label])
+            else:
+                for item in report[label].items():
+                    c_w.writerow(item)
+            c_w.writerow([])
+
+    display = ConfusionMatrixDisplay(confusion_matrix=matrix, display_labels=labels)
+    display.plot()
+    plt.show()
 
     return {"F1": f1}
 
@@ -106,7 +123,9 @@ def main():
     # how many samples to select per label class, ie "10-shot" or "5-shot"
     shot = 10
 
-    create_splits(shot)
+    if not os.path.exists("test.csv") and not os.path.exists("train.csv"):
+        print("Generating splits...")
+        # create_splits(shot)
 
     dataset = load_dataset('csv', data_files={
         "train": "train.csv",
@@ -171,6 +190,8 @@ def main():
     )
 
     trainer.train()
+
+    print(torch.cuda.memory_summary())
 
     trainer.evaluate()
 
