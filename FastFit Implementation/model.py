@@ -125,7 +125,7 @@ def main():
 
     if not os.path.exists("test.csv") and not os.path.exists("train.csv"):
         print("Generating splits...")
-        # create_splits(shot)
+        create_splits(shot)
 
     dataset = load_dataset('csv', data_files={
         "train": "train.csv",
