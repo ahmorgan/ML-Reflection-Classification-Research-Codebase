@@ -8,7 +8,8 @@ SetFit - setfit ver 1.0.3, optuna, numpy, sklearn |
 GPT-4o - openai, numpy, sklearn |
 Dataset Construction - numpy, pandas, openpyxl |
 Data Visualization - matplotlib |
-Disagreement Filter - NLTK
+Disagreement Filter - nltk |
+FastFit Implementation - fastfit, datasets ver 2.21.0, torch, numpy, sklearn, optuna, matplotlib
 
 Fall Poster Abstract:
 
