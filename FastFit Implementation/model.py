@@ -66,12 +66,20 @@ def compute_metrics(p) -> dict[str, float]:
 
     references = p.label_ids
 
+    print(references)
+
     labels = ["API", 'Course Structure and Materials', 'Github', 'Group Work', 'MySQL', 'No Issue',
               'Python and Coding', 'Time Management and Motivation']
 
-    matrix = confusion_matrix(predictions, references, labels=[i for i in range(0, max(references)+1)])
-    report = classification_report(predictions, references, labels=[i for i in range(0, max(references)+1)], target_names=labels, output_dict=True)
-    f1 = f1_score(predictions, references, average="macro")
+    with open("raw_results.csv", "w", encoding="utf-8", newline="") as rr:
+        c_w = csv.writer(rr)
+        for pred in predictions:
+            c_w.writerow([labels[pred]])
+
+    matrix = confusion_matrix(references, predictions, labels=[i for i in range(0, max(references)+1)])
+    report = classification_report(references, predictions, labels=[i for i in range(0, max(references)+1)], target_names=labels, output_dict=True)
+    f1 = f1_score(references, predictions, average="macro")
+    assert f1 == f1_score(predictions, references, average="macro"), f"Not equal, {f1_score(predictions, references, average='macro')}"
 
     with open("results.csv", "w", encoding="utf-8", newline="") as results:
         c_w = csv.writer(results)
@@ -145,7 +153,7 @@ def main():
         # print(f"Repeats: {repeats}")
 
         search_trainer = FastFitTrainer(
-            model_name_or_path="sentence-transformers/all-mpnet-base-v2",
+            model_name_or_path="sentence-transformers/all-MiniLM-L12-v2",
             learning_rate=lr,
             num_train_epochs=epochs,
             dataset=dataset,
@@ -177,7 +185,7 @@ def main():
     # We don't have to set it ourselves like with SetFit
     trainer = FastFitTrainer(
         model_name_or_path="sentence-transformers/all-mpnet-base-v2",
-        learning_rate=7e-5,  # best_params["lr"],
+        learning_rate=7.99e-5,  # best_params["lr"],
         num_train_epochs=50,  # best_params["epochs"],
         dataset=dataset,
         optim="adafactor",
