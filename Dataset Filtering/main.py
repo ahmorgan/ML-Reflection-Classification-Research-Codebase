@@ -3,6 +3,8 @@ import csv
 from itertools import combinations
 from nltk.metrics.agreement import AnnotationTask
 from nltk.metrics import binary_distance
+from matplotlib import pyplot as plt
+import pandas as pd
 
 
 # filters out reflections that, by consensus of number of labels, have only
@@ -82,27 +84,43 @@ def validation(prev_dataset, new_dataset):
     return task_prev.alpha(), task_new.alpha()
 
 
+# To avoid having to regenerate label_sets.csv every time I want to filter a D-ESX-X sub-dataset,
+# just start with the full label_sets.csv and filter out reflections in it that aren't in
+# full_dataset.csv
+def match_to_full_dataset(label_sets):
+    dataset_refs = pd.read_csv("full_dataset.csv")["text"].to_numpy().tolist()
+    all_refs = pd.DataFrame(label_sets)[0].to_numpy().tolist()
+
+    # would just filter a dataframe but that encounters a tricky bug
+    # where reflections with exactly the same text are wrongly included
+    first_ref = dataset_refs[0]
+    # https://stackoverflow.com/questions/6294179/how-to-find-all-occurrences-of-an-element-in-a-list
+    indices = [i for i, x in enumerate(all_refs) if x == first_ref]
+    for index in indices:
+        temp_refs = all_refs[index:index+len(dataset_refs)]
+        if temp_refs == dataset_refs:
+            all_refs = label_sets[index:index+len(dataset_refs)]
+
+    assert len(dataset_refs) == len(all_refs), f"{len(dataset_refs)}, {len(all_refs)}"
+    assert dataset_refs == [row[0] for row in all_refs], "Datasets contain differing reflections"
+
+    return all_refs
+
+
 # Calculates the agreement for each reflection based on label_sets.csv (see below) and filter out reflections
 # from a provided dataset with
 def main():
-    # Instructions: place a file called "full_dataset.csv" containing your multi-label dataset and a file
+    # Instructions: place a file called "full_dataset.csv" containing all of your reflections and a file
     # called "label_sets.csv" containing all of your reflections with a list of label sets into the same
-    # directory as main.py before running main.
-    #
-    # ***You can use my dataset generation code under Dataset Construction to create a full_dataset.csv
+    # directory as main.py before running main
+    # see my MLCompare journal for examples of full_dataset.csv and label_sets.csv or email me for help
+    # if you can't run the code at amorga94@charlotte.edu
+    # ***Use my dataset generation code under Dataset Construction to create a full_dataset.csv
     # and label_sets.csv for any labels you wish
-    # ***Alternatively, you can use the pre-generated full_dataset.csv and label_sets.csv in my research
-    # journal. Download Primary Labels/Multi-label Dataset and Reflections + Label Sets For Calculating Agreement
-    # from my Artifacts section and use them as full_dataset.csv and label_sets.csv respectively. These
-    # datasets include only reflections using the primary labels, and they include reflections from
-    # all of our D-ESX-X datasets from the Summer, Fall, and Winter.
-    #
-    # You can alter the threshold variable to change the agreement threshold for inclusion
+    # Last, alter threshold to change the agreement threshold for inclusion
     # in the final dataset.
-    # Last, you can change single_label to false to generate a multi-label dataset -- else, the code
-    # will generate a dataset only containing reflections with one consensus label
 
-    threshold = 0.7
+    threshold = 0.0
     single_label = True
 
     # Users can ignore everything else below
@@ -113,6 +131,9 @@ def main():
     dist_to_ref = {}
     with open("label_sets.csv", "r", encoding="utf-8") as ls:
         c_r = list(csv.reader(ls))
+
+        c_r = match_to_full_dataset(label_sets=c_r)
+
         unfiltered_dataset = copy.deepcopy(c_r)  # copy of the original dataset is saved for later validation
 
         # filter out reflections that (based on the consensus length) don't have only one label
@@ -193,12 +214,21 @@ def main():
 
     alpha_prev, alpha_new = validation(unfiltered_dataset, filtered_dataset)
 
-    print(f"Validation: Krippendorff's alpha of previous multi-label dataset: {alpha_prev}")
-    print(f"Validation: Krippendorff's alpha of new multi-label dataset: {alpha_new}")
+    print(f"Validation: Krippendorff's alpha of previous multi-label dataset: {alpha_prev} with dataset length: {len(unfiltered_dataset)}")
+    print(f"Validation: Krippendorff's alpha of new dataset: {alpha_new} with dataset length: {len(filtered_dataset)}")
+
+    """
+    kalphas = [1.0, 1.0, 1.0, 0.9611, 0.8743, 0.8431, 0.8071, 0.7436, 0.7126, 0.6795, 0.6611]
+    kalphas.reverse()
+    plt.plot([.0,.1,.2,.3,.4,.5,.6,.7,.8,.9,1], kalphas)
+    plt.xlabel("Agreement Threshold")
+    plt.ylabel("Alpha")
+    plt.show()
+    """
 
 
 if __name__ == "__main__":
-    main()
+        main()
 
 """
 @inproceedings{passonneau-2006-measuring,
