@@ -1,4 +1,4 @@
-# Codebase for my contributions for Fall 2024 OUR Research Scholars + Spring 2025 Research Assistantship
+# Codebase for my contributions to Fall 2024 OUR Research Scholars project + Spring 2025 Research Assistantship
 # Fall Poster: Comparative Analysis of Resource-Efficient Multi-Label Text Classification Methods: GPT-4o vs fine-tuning with SetFit
 # Spring paper: "A Comparison of Machine Learning Approaches for Student Challenge Classification" By Sandra Wiktor, Dr. Mohsen Dorodchi, Eunyoung Kim, Andrew Morgan, Nicole Wiktor, Frank Garcia
 This repository contains all code created for the above projects. I could not include the train/test datasets I used for SetFit/GPT-4o or the raw data I used for train/test dataset construction for research ethics purposes.
