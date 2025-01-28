@@ -17,7 +17,6 @@ from collections import Counter
 import organize
 from pathlib import Path
 import os, os.path
-import copy
 
 
 # there might be a cleaner way to do the following that doesn't involve
@@ -87,7 +86,6 @@ def process(files, output_file, dataset_name):
     # equally valid. top_n_labels keeps track of the length of each individual label set to determine n.
     # **************************************
     data = {}
-    top_n_labels = {}
 
     # keeping track of all reflections w/o duplicates to add to
     # final processed dataset.
@@ -96,19 +94,12 @@ def process(files, output_file, dataset_name):
     # which is added in a special case
     reflections = []
 
-    # reflections mapped to label sets instead of just a list of labels
-    # i.e. if the original raw data had two annotators who gave a reflection [Python and Coding, GitHub] and
-    # [Python and Coding] respectively, refs_labelsets preserves the individual label sets rather than concatenating
-    # both label sets provided by the two annotators
-    refs_labelsets = {}
-
     # Iterate through all annotation files, encode the labels to integers, and concatenate the single-label rows into
     # label lists for each reflection
     for file in files:
         with open(file, "r", encoding="utf-8") as annotation:
             c_r = csv.reader(annotation)
             c_r = list(c_r)
-            string_c_r = list(copy.deepcopy(c_r))
             # replace issue strings with mapped integers
             for i in range(0, len(c_r)):
                 if c_r[i][1] in issue2integer.keys() and c_r[i][1] != "Other":
@@ -120,49 +111,50 @@ def process(files, output_file, dataset_name):
             c_r.append(["", -1])  # dummy list entry, so the last reflection is included in the loop below
             current_reflection = c_r[0][0]
             reflection_labels = []  # n labels chosen by annotator for that reflection
-            reflection_labels_str = []  # unencoded label strings with no "other" abstraction
             i = 0
-            count = 0
             for row in c_r:
                 # row[0] == reflection text, row[1] == label
                 if current_reflection != row[0]:
                     # create a new entry in the dictionary if one doesn't exist for the current reflection
                     if current_reflection not in data.keys():
-                        data.update({current_reflection: reflection_labels})  # new reflection_labels array
-                        top_n_labels.update({current_reflection: [i]})
-                        refs_labelsets.update({current_reflection: [copy.deepcopy(reflection_labels_str)]})  # list of lists of label sets
+                        data.update({current_reflection: [reflection_labels]})  # new reflection_labels array
                         # refs_labelsets needed to calculate inter-annotator disagreement
                         reflections.append(current_reflection)  # current_reflection replaced, add to reflections
                     else:
-                        data[current_reflection].extend(reflection_labels)
-                        top_n_labels[current_reflection].append(i)
-                        refs_labelsets[current_reflection].append(reflection_labels_str)
+                        data[current_reflection].append(reflection_labels)
                     i = 0
                     reflection_labels = []
-                    reflection_labels_str = []
                     current_reflection = row[0]
                 reflection_labels.append(row[1])
-                if count < len(string_c_r):
-                    reflection_labels_str.append(string_c_r[count][1])
                 i += 1
-                count += 1
+
+    refs_labelsets = {}
 
     # resolve label lists to consensus label list for each reflection
     for key in data.keys():
         # https://stackoverflow.com/questions/1518522/find-the-most-common-element-in-a-list
-        offset = 0
-        while 1+max(list(issue2integer.values())) in data[key]:
-            data[key].remove(1+max(list(issue2integer.values())))  # remove all integers mapping to an excluded label
-            offset += 1  # since one label is removed from data, remove one label from top_n_labels
+
+        for i in range(0, len(data[key])):
+            while 1+max(list(issue2integer.values())) in data[key][i]:
+                data[key][i].remove(1+max(list(issue2integer.values())))  # remove all integers mapping to an excluded label
+        data[key] = [list(set(l_set)) for l_set in data[key] if l_set]  # remove empty label sets after removing excluded labels
+
+        label_sets = []
+        for label_set in data[key]:
+            label_sets.append([integer2issue[label] for label in label_set])
+        refs_labelsets.update({key: label_sets})
+
         # choose the top n labels from the list of labels, where n is the mean number of labels for that reflection
-        top_n_labels[key] = round((sum(top_n_labels[key])-offset) / len(top_n_labels[key]))
-        # only exception is to not allow for zero labels, which can happen when the other column is excluded
-        top_n_labels[key] = top_n_labels[key] if top_n_labels[key] != 0 else 1
-        # if there are still labels after excluding the other column, proceed to resolving label lists
+        # 1 in the case of every label being excluded, just to avoid a divide by zero error (that reflection will not be used)
+        n = 1 if len(data[key]) == 0 else round(sum([len(l_set) for l_set in data[key]]) / len(data[key]))
+
+        # flatten 2d list of label sets
+        data[key] = [label for l_set in data[key] for label in l_set]
+
         if data[key]:
-            c = Counter(data[key]).most_common(top_n_labels[key])
+            c = Counter(data[key]).most_common(n)
             data[key].clear()
-            for i in range(0, top_n_labels[key]):
+            for i in range(0, n):
                 if i >= len(c):
                     break
                 data[key].append(c[i][0])
@@ -204,9 +196,9 @@ def process(files, output_file, dataset_name):
 
     df.to_csv(output_file, index=False)
 
-    # return new reflections for sanitize_gpt_reflections() and the label sets
+    # return new reflections for sanitize_gpt_reflections() and the the label sets
     # and their corresponding reflections
-    package = [reflections_new, list(refs_labelsets.items())]
+    package = [reflections_new, [list(item) for item in refs_labelsets.items()]]
 
     return package
 
@@ -293,23 +285,18 @@ def validate_datasets():
         counter = Counter(label_strs).most_common(avg_len)
         consensus_labels_encoded = [issue2integer[counter[i][0]] for i in range(0, len(counter))]
         for label_enc in consensus_labels_encoded:
-            assert full[i+1][label_enc] == "1", f"Consensus label mismatch at reflection number {i}!"
+            assert full[i+1][label_enc] == "1", f"Consensus label mismatch at reflection number {i}, reflection {full[i+1][-1]}!"
 
 
 def main():
     # Instructions: identify what labels should be kept in the final dataset by altering "exclude_labels"
+    # and/or "include_other" (which includes the "Other" label class)
     # Ensure that this folder -> https://drive.google.com/drive/folders/10g5msqE4sELGakqICucO9sVuxlXoIggM?usp=drive_link
-    # exists and is named "raw_data" in the same directory as main.py and organize.py before running the code.
-    # If you use your own raw data, refer to the top of this file for instructions on minor manual dataset cleaning to be done first.
-    #
-    # This code will output a multi-label dataset for each sub-dataset (each D-ESX-X dataset), as well
-    # as full_dataset.csv and label_sets.csv, which should be used in the Dataset Filtering code. 
-    # full_dataset.csv is all of the sub-datasets concatenated together, while label_sets.csv is all of
-    # the reflections from full_dataset.csv except with the label sets from each annotator instead of the
-    # consensus labels. You can ignore gpt_reflections.csv, which I used over the Fall for experiments with GPT-4o.
-    # gpt_reflections.csv is just all of the reflections divided into sub-reflections (i.e. a new entry in the csv for
-    # each student response to the "How are you feeling about this class?", "What issues are you having with this class?",
-    # header questions). Including the header questions in my prompts to GPT-4o improved its results. 
+    # exists as "raw_data" in the same directory as main.py and organize.py
+    # Also, create an empty directory called "data"
+    # Refer to the top of this file for instructions on minor manual dataset cleaning to be done first
+    # This code will output a multi-label dataset for each sub-dataset (each D-ESX-X dataset) as well as
+    # "gpt_reflections.csv", which is used in my GPT-4o implementation as part of the prompt
     
     # Support for excluding labels in the final generated multilabel training dataset
     exclude_labels = ["Assignments", "Quizzes", "Learning New Material", "Understanding requirements and instructions", "Personal Issue"]
@@ -372,9 +359,10 @@ def main():
         # package is the [0] the list of reflections to undergo further preprocessing for GPT code
         # and [1] the label sets and their corresponding reflections for calculating Krippendorff's alpha
         reflections_sanitized.extend([ref for ref in package[0]])
+
         for ref_label_pair in package[1]:
             if ref_label_pair[0] in reflections_sanitized:
-                label_sets.append(ref_label_pair)  # label sets for calculating Krippendorff's alpha
+                label_sets.append(ref_label_pair)
 
         # concatenate the datasets for each D-ESX-X dataset into one csv file full_dataset.csv
         with open(output_file, 'r', encoding="utf-8") as of:
