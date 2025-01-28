@@ -26,8 +26,9 @@ def single_label_filter(dataset):
             avg_len += len(label_set)
         avg_len = round(avg_len / len(labels))
 
-        # the assumption is made that if the avg_len rounds to one,
-        # the reflection is likely a single-label reflection
+        # Since label_sets.csv / dataset contains only the labels used to calculate the consensus labels,
+        # if the average length of the labels in dataset is 1, there is only one consensus label attached to
+        # that reflection in full_dataset.csv
         if avg_len == 1:
             ret_dataset.append(row)
 
@@ -93,18 +94,23 @@ def match_to_full_dataset(label_sets):
 
     # would just filter a dataframe but that encounters a tricky bug
     # where reflections with exactly the same text are wrongly included
+    ret_dataset = []
     first_ref = dataset_refs[0]
     # https://stackoverflow.com/questions/6294179/how-to-find-all-occurrences-of-an-element-in-a-list
-    indices = [i for i, x in enumerate(all_refs) if x == first_ref]
-    for index in indices:
-        temp_refs = all_refs[index:index+len(dataset_refs)]
-        if temp_refs == dataset_refs:
-            all_refs = label_sets[index:index+len(dataset_refs)]
+    i = 0
+    while len(ret_dataset) < len(dataset_refs):
+        idx = all_refs.index(first_ref)
+        while i < len(dataset_refs) and dataset_refs[i] == all_refs[idx]:
+            ret_dataset.append(label_sets[idx])
+            idx += 1
+            i += 1
+        if i < len(dataset_refs):
+            first_ref = dataset_refs[i]
 
-    assert len(dataset_refs) == len(all_refs), f"{len(dataset_refs)}, {len(all_refs)}"
-    assert dataset_refs == [row[0] for row in all_refs], "Datasets contain differing reflections"
+    assert len(dataset_refs) == len(ret_dataset), f"{len(dataset_refs)}, {len(ret_dataset)}"
+    assert dataset_refs == [row[0] for row in ret_dataset], "Datasets contain differing reflections"
 
-    return all_refs
+    return ret_dataset
 
 
 # Calculates the agreement for each reflection based on label_sets.csv (see below) and filter out reflections
