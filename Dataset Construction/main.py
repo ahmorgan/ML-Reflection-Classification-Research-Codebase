@@ -298,7 +298,12 @@ def main():
     # This code will output a multi-label dataset for each sub-dataset (each D-ESX-X dataset) as well as
     # "gpt_reflections.csv", which is used in my GPT-4o implementation as part of the prompt
     
-    # Support for excluding labels in the final generated multilabel training dataset
+    # Superset of labels as of 1/28: 
+    # [None, Python and Coding, GitHub, MySQL, Assignments, Quizzes, Learning New Material, Understanding requirements and instructions,
+    # Course Structure and Materials, Time Management, Group Work, IDE and Package Installation, Personal Issue, API, HTML, SDLC, Other Primary]
+    # All labels in the data but not in the superset are excluded
+    #
+    # Choose which labels to exclude in the final generated multilabel training dataset
     exclude_labels = ["Assignments", "Quizzes", "Learning New Material", "Understanding requirements and instructions", "Personal Issue"]
     # TODO write in support for secondary labels
     label_category = "Primary"  # CAUTION: as of 1/14 I have not written in full support for the secondary label category -- COMING SOON
