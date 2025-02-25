@@ -5,7 +5,14 @@ from optuna import Trial
 import numpy
 import csv
 import torch
+import random
 from matplotlib import pyplot as plt
+
+
+results_file = "results.csv"
+raw_results_file = "raw_results.csv"
+raw_results_probs_file = "raw_results_probabilities.csv"
+confusion_matrix_file = "confusion_matrix.png"
 
 
 # Generate a confusion matrix for each label in the dataset. For each column/vector
@@ -13,9 +20,9 @@ from matplotlib import pyplot as plt
 # one confusion matrix will be created. That will represent the confusion for
 # that label. Repeat process for each label. Hopefully, with enough predictions
 # for each class, a minimally noisy confusion matrix can be created for each label
-def compute_metrics(y_pred, y_true) -> dict[str, float]:
+def compute_metrics(y_pred, y_true, y_pred_probs) -> dict[str, float]:
     # initialize labels
-    labels = ["API", 'Course Structure and Materials', 'Github', 'Group Work', 'MySQL', 'No Issue',
+    labels = ['IDE and Environment Setup', 'None ', 'Other',
               'Python and Coding', 'Time Management and Motivation']
     if not any(item in y_true for item in [i for i in range(2, max(y_true))]):  # MULTI-LABEL CASE if y_true doesn't contain numbers other than 0,1
         # save the raw predictions made by the model
@@ -54,12 +61,12 @@ def compute_metrics(y_pred, y_true) -> dict[str, float]:
         result.update({"accuracy": accuracy})
         return result
     else:
-        matrix = confusion_matrix(y_true, y_pred, labels=[i for i in range(0, max(y_true) + 1)])
-        report = classification_report(y_true, y_pred, labels=[i for i in range(0, max(y_pred) + 1)],
+        matrix = confusion_matrix(y_true, y_pred, labels=[i for i in range(0, len(labels))])  # max(y_true) + 1)])
+        report = classification_report(y_true, y_pred, labels=[i for i in range(0, len(labels))],  # max(y_true) + 1)],
                                        target_names=labels, output_dict=True)
-        f1 = f1_score(y_true, y_pred, average="macro")
+        f1 = f1_score(y_true, y_pred, average="weighted")
 
-        with open("results.csv", "w", encoding="utf-8", newline="") as results:
+        with open(results_file, "w", encoding="utf-8", newline="") as results:
             c_w = csv.writer(results)
             c_w.writerow(labels)
             for row in matrix:
@@ -76,14 +83,21 @@ def compute_metrics(y_pred, y_true) -> dict[str, float]:
                         c_w.writerow(item)
                 c_w.writerow([])
 
-        with open("raw_results.csv", "w", encoding="utf-8", newline="") as rr:
+        with open(raw_results_file, "w", encoding="utf-8", newline="") as rr:
             c_w = csv.writer(rr)
             for pred in y_pred:
                 c_w.writerow([labels[pred]])
 
+        with open(raw_results_probs_file, "w", encoding="utf-8", newline="") as rrp:
+            c_w = csv.writer(rrp)
+            for pred in y_pred_probs:
+                c_w.writerow(pred)
+
         display = ConfusionMatrixDisplay(confusion_matrix=matrix, display_labels=labels)
         display.plot()
-        plt.show()
+        plt.gca().set_xticklabels(labels, rotation=45, ha="right", rotation_mode="anchor")
+        plt.savefig(confusion_matrix_file)
+        plt.cla()
         return {"F1": f1}
 
 
@@ -92,32 +106,32 @@ def model_init(params):
     params = {  # "multi_target_strategy": "one-vs-rest",
               "device": torch.device("cuda")}
     # all-MiniLM-L12-v2 is 33.6M params
-    return SetFitModel.from_pretrained("sentence-transformers/all-MiniLM-L12-v2", **params)
+    return SetFitModel.from_pretrained("sentence-transformers/paraphrase-distilroberta-base-v2", **params)
 
 
 # hyperparameters to optimize during hp search
 def hp_space(trial: Trial):
     return {
-        "body_learning_rate": trial.suggest_float("body_learning_rate", 1e-5, 1e-3, log=True),
-        "num_epochs": trial.suggest_int("num_epochs", 1, 3)
+        "body_learning_rate": trial.suggest_float("body_learning_rate", 1e-4, 1e-2, log=True),
+        "num_epochs": trial.suggest_int("num_epochs", 1, 3),
+        "batch_size": trial.suggest_categorical("batch_size", [8, 16])
     }
 
 
-def main():
+def training_iteration(hps=None, do_hp_search=False, train_file="train.csv", test_file="test.csv"):
     # Multi-label text classification using Setfit
     # loosely followed https://github.com/NielsRogge/Transformers-Tutorials/blob/master/BERT/Fine_tuning_BERT_(and_friends)_for_multi_label_text_classification.ipynb
 
-    # Instructions: create a folder called "data-splits" containing "setfit-dataset-train.csv" and setfit-dataset-test.csv", which are generated from the Dataset Construction script
+    # Instructions: create a folder called "data-splits" containing "setfit-dataset-setfit-dataset-train.csv" and setfit-dataset-setfit-dataset-test.csv", which are generated from the Dataset Construction script
     # Uncomment hyperparameter search code block and comment TrainingArguments code block and "args=args" to run a hyperparameter search
     # Last, change the labels List in compute_metrics if running experiments with different labels than "Python and Coding", "GitHub", "Assignments", and "Time Management"
 
     # Datasets are generated using the consensus data parser script
-
     print("Loading datasets...")
     # load two datasets from csv files in dataset dictionary
     dataset = load_dataset('csv', data_files={
-        "train": "data-splits/setfit-dataset-train.csv",
-        "test": "data-splits/setfit-dataset-test.csv"
+        "train": train_file,
+        "test": test_file
     })
 
     print("Processing datasets...")
@@ -137,7 +151,8 @@ def main():
 
         # collect exactly eight examples of every labeled class in training dataset
         # elegant line of code taken from above medium.com guide
-        eight_examples_of_each = numpy.concatenate([numpy.random.choice(numpy.where(dataset["train"][label])[0], 10) for label in labels])
+        eight_examples_of_each = numpy.concatenate(
+            [numpy.random.choice(numpy.where(dataset["train"][label])[0], 10) for label in labels])
         # replace training dataset with the eight examples of each
         dataset["train"] = dataset["train"].select(eight_examples_of_each)
 
@@ -161,54 +176,185 @@ def main():
 
     print("Loading model...")
 
-    # only setting initial batch size, hyperparameter search will cover learning rate and num epochs
-    args = TrainingArguments(
-        batch_size=8,
-        body_learning_rate=0.0001037,  # optimal lr determined through hp search
-        num_epochs=2
-    )
+    if not do_hp_search:
+        # fine tune pretrained model using datasets using default hyperparameters (will change as I run experiments with
+        # varying hyperparameters, only running default hps for debugging right now)
+        trainer = Trainer(
+            model_init=model_init,
+            train_dataset=dataset["train"],
+            eval_dataset=dataset["test"],
+            metric=compute_metrics,
+        )
+        trainer.apply_hyperparameters(hps)
 
-    # fine tune pretrained model using datasets using default hyperparameters (will change as I run experiments with
-    # varying hyperparameters, only running default hps for debugging right now)
-    trainer = Trainer(
-        model_init=model_init,
-        train_dataset=dataset["train"],
-        eval_dataset=dataset["test"],
-        metric=compute_metrics,
-        args=args
-    )
+        print("Training...")
 
-    print("Training...")
-    """
-    # optimizing sentence transformer learning rate and num of epochs with hyperparameter search
-    best_run = trainer.hyperparameter_search(
-        # compute_objective is the overall accuracy of all labels
-        direction="maximize",  # maximize accuracy
-        hp_space=hp_space,
-        compute_objective=lambda result: result.get("F1"),
-        n_trials=20
-    )
-    """
-    # trainer.apply_hyperparameters(best_run.hyperparameters)
+        trainer.train()
+        print("Testing...")
+        metrics = trainer.evaluate()  # evaluate() calls compute_metrics()
 
-    trainer.train()
+        """
+            print(metrics)
 
-    print("Testing...")
-    metrics = trainer.evaluate()  # confusion data
+            with open("metrics.csv", "w") as m:
+                c_w = csv.writer(m)
+                for key in metrics.keys():
+                    arr = [key, metrics[key]]
+                    c_w.writerow(arr)
+            print("Metrics data written to metrics.csv")
+        """
 
-    # DON'T push to hub for initial pass of experiment
+        return None
+    else:  # HP Search
+        trainer = Trainer(
+            model_init=model_init,
+            train_dataset=dataset["train"],
+            eval_dataset=dataset["test"],
+            metric=compute_metrics,
+        )
+
+        # optimizing sentence transformer learning rate and num of epochs with hyperparameter search
+        best_run = trainer.hyperparameter_search(
+            # compute_objective is the overall accuracy of all labels
+            direction="maximize",  # maximize accuracy
+            hp_space=hp_space,
+            compute_objective=lambda result: result.get("F1"),
+            n_trials=10
+        )
+        print(best_run.hyperparameters)
+
+        return best_run.hyperparameters
+
     # model.push_to_hub("setfit-multilabel-test")
 
-    print(metrics)
 
-    with open("metrics.csv", "w") as m:
-        c_w = csv.writer(m)
-        for key in metrics.keys():
-            arr = [key, metrics[key]]
-            c_w.writerow(arr)
-    print("Metrics data written to metrics.csv")
+def create_splits(dataset_file, shot, train_file="data-splits/train.csv", test_file="data-splits/test.csv"):
+    # create 80/20 train and test splits
+    with open(dataset_file, "r", encoding="utf-8", newline="") as ds:
+        c_r = list(csv.reader(ds))
+        c_r = c_r[1:]
+        random.seed()
+        random.shuffle(c_r)
 
-    print(torch.cuda.memory_summary())
+        # FastFit internally treats the string label "None" as None (as in the null value),
+        # so circumvent that by changing the name of the label to "None "
+        for row in c_r:
+            if row[1] == "None":
+                row[1] = "None "
+
+        labels = [row[1] for row in c_r]
+
+        train = []
+        for label in set(labels):
+            # exclude labels that are not common enough and are not "IDE and Environment Setup"
+            # (special case label where we don't have enough of them but still want to include)
+            if labels.count(label) < shot and label != "IDE and Environment Setup":
+                continue
+            count = 0
+            for row in c_r:
+                if row[1] == label:
+                    train.append(row)
+                    count += 1
+                if count == shot:
+                    break
+        train_labels = [row[1] for row in train]
+        test = [row for row in c_r if (row not in train and row[1] in set(train_labels))]
+
+        for row in train:
+            assert row not in test, "Test contains reflections from train!"
+
+        for label in set(train_labels):
+            if label != "IDE and Environment Setup":
+                assert train_labels.count(label) == shot, "Train does not contain ten of each label!"
+
+        test_labels = [row[1] for row in test]
+        for label in set(test_labels):
+            print(f"{label} label count in test: {test_labels.count(label)}")
+        for label in set(train_labels):
+            print(f"{label} label count in train: {train_labels.count(label)}")
+
+        with open(test_file, "w", encoding="utf-8", newline="") as tst:
+            c_w = csv.writer(tst)
+            c_w.writerow(["text", "label"])
+            c_w.writerows(test)
+
+        with open(train_file, "w", encoding="utf-8", newline="") as trn:
+            c_w = csv.writer(trn)
+            c_w.writerow(["text", "label"])
+            c_w.writerows(train)
+
+
+def update_file_paths(results, raw_results, raw_results_probs, cm):
+    global results_file
+    global raw_results_file
+    global raw_results_probs_file
+    global confusion_matrix_file
+    results_file = results
+    raw_results_file = raw_results
+    raw_results_probs_file = raw_results_probs
+    confusion_matrix_file = cm
+
+
+def main():
+    # Experiment sequence
+    # HP searches -> apply hyperparameters
+    # k-fold experiments
+
+    ### HP Search(es) ###
+
+    # creates train.csv and test.csv to be trained and tested on
+    create_splits(dataset_file="full_datasets/sl-r1-80-proficiency.csv",
+                  shot=10,
+                  train_file="data-splits/train_80_hps.csv",
+                  test_file="data-splits/test_80_hps.csv")
+    r180_hps = training_iteration(do_hp_search=True,
+                                  train_file="data-splits/train_80_hps.csv",
+                                  test_file="data-splits/test_80_hps.csv")
+    print(r180_hps)
+
+    ### K-Fold Evaluation(s) ###
+    # Regenerating train/testing splits on every iteration to account for evaluation noise
+
+    # 80, 10 shot
+    for k in range(0, 5):
+        # update paths used in compute_metrics() to log results
+        # would pass these as parameters to compute_metrics() but
+        # compute_metrics() is called by setfit internally so it's difficult to
+        update_file_paths("results/results_r1_80_10_" + str(k) + ".csv",
+                          "results/raw_results_r1_80_10_" + str(k) + ".csv",
+                          "results/probs_r1_80_10_" + str(k) + ".csv",
+                          "results/cm_r1_80_10_" + str(k) + ".csv")
+        create_splits(dataset_file="full_datasets/sl-r1-80-proficiency.csv", shot=10)
+        training_iteration(hps=r180_hps)
+
+    # 100, 10 shot
+    for k in range(0, 5):
+        update_file_paths("results/results_r1_100_10_" + str(k) + ".csv",
+                          "results/raw_results_r1_100_10_" + str(k) + ".csv",
+                          "results/probs_r1_100_10_" + str(k) + ".csv",
+                          "results/cm_r1_100_10_" + str(k) + ".csv")
+        create_splits(dataset_file="full_datasets/sl-r1-100-proficiency.csv", shot=10)
+        training_iteration(hps=r180_hps)
+
+    # 80, 20 shot
+    for k in range(0, 5):
+        update_file_paths("results/results_r1_80_20_" + str(k) + ".csv",
+                          "results/raw_results_r1_80_20_" + str(k) + ".csv",
+                          "results/probs_r1_80_20_" + str(k) + ".csv",
+                          "results/cm_r1_80_20_" + str(k) + ".csv")
+        create_splits(dataset_file="full_datasets/sl-r1-80-proficiency.csv", shot=20)
+        training_iteration(hps=r180_hps)
+
+    # 100, 20 shot
+    for k in range(0, 5):
+        update_file_paths("results/results_r1_100_20_" + str(k) + ".csv",
+                          "results/raw_results_r1_100_20_" + str(k) + ".csv",
+                          "results/probs_r1_100_20_" + str(k) + ".csv",
+                          "results/cm_r1_100_20_" + str(k) + ".csv")
+        create_splits(dataset_file="full_datasets/sl-r1-100-proficiency.csv", shot=20)
+        training_iteration(hps=r180_hps)
+
+    print(r180_hps)
 
 
 if __name__ == "__main__":
