@@ -4,7 +4,7 @@
 This repository contains all code created for the above projects. I could not include the train/test datasets I used for SetFit/GPT-4o or the raw data I used for train/test dataset construction for research ethics purposes.
 
 Dependencies required (latest versions if not specified otherwise):
-SetFit - setfit ver 1.0.3, optuna, numpy, sklearn |
+SetFit - setfit ver 1.0.3, huggingface-hub ver 0.23.5, transformers ver 4.43.3, optuna, numpy, sklearn |
 GPT-4o - openai, numpy, sklearn |
 Dataset Construction - numpy, pandas, openpyxl |
 Data Visualization - matplotlib |
