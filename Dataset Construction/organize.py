@@ -62,7 +62,7 @@ def handle_esa41_formatting(sheet):
     return frame
 
 
-def organize(label_category):
+def prepare_raw_data(label_category):
     if label_category == "Primary":
         label_name_conversion.update({"other": "Other Primary"})
     else:
@@ -116,7 +116,8 @@ def organize(label_category):
     # sub-responses. This is useful for my GPT experiments, where I want to include question headers
     # i.e. instead of just "Anxious", the reflection should read "How are you feeling about this class?: Anxious"
     ref_parts = pd.concat(ref_parts_dfs, ignore_index=True)
-    ref_parts.drop_duplicates(inplace=True)
+    print(len(ref_parts))
+    # ref_parts.drop_duplicates(inplace=True)
     # gpt_reflections is a csv file and not a class member because I'm going to create the file
     # anyway later, so I might as well do it now and then overwrite it if and when it's necessary
     ref_parts.to_csv("gpt_reflections.csv", header=False, index=False)
