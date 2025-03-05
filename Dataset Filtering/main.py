@@ -89,8 +89,14 @@ def validation(prev_dataset, new_dataset):
 # just start with the full label_sets.csv and filter out reflections in it that aren't in
 # full_dataset.csv
 def match_to_full_dataset(label_sets):
-    dataset_refs = pd.read_csv("full_dataset.csv")["text"].to_numpy().tolist()
-    all_refs = pd.DataFrame(label_sets)[0].to_numpy().tolist()
+    with open("full_dataset.csv", "r", encoding="utf-8") as fd:
+        dataset_refs = list(csv.reader(fd))
+        text_col = list(dataset_refs[0]).index("text")
+        dataset_refs = [row[text_col] for row in dataset_refs[1:]]
+    all_refs = [row[0] for row in label_sets]
+
+    # dataset_refs = pd.read_csv("full_dataset.csv")["text"].to_numpy().tolist()
+    # all_refs = pd.DataFrame(label_sets)[0].to_numpy().tolist()
 
     # would just filter a dataframe but that encounters a tricky bug
     # where reflections with exactly the same text are wrongly included
@@ -147,6 +153,9 @@ def main():
         if single_label:
             c_r = single_label_filter(c_r)
 
+        for row in c_r:
+            print(row[1])
+
         for elem in c_r:  # elem is a tuple containing the reflection-labelset pair
             labels = eval(elem[1])
 
@@ -192,18 +201,25 @@ def main():
             if single_label:
                 c_w.writerow(["text", "label"])  # write header row
                 for row in c_r[1:]:
-                    if row[-1] in desired_reflections:
-                        # search for the index of the "1" in the multi-label dataset and
-                        # find the corresponding label in the labels array using that index
-                        i = 0
-                        while row[i] == "0":
-                            i += 1
-                        # row[-1] is the reflection text and labels[i] is the label
-                        c_w.writerow([row[-1], labels[i]])
+                    # Check which column "text" is in  -- if we are going from a multi-label to single-label
+                    # dataset, the text column will be last, otherwise it will be first
+                    text_col = list(c_r[0]).index("text")
+                    if text_col != 0:
+                        if row[-1] in desired_reflections:
+                            # search for the index of the "1" in the multi-label dataset and
+                            # find the corresponding label in the labels array using that index
+                            i = 0
+                            while row[i] == "0":
+                                i += 1
+                            # row[-1] is the reflection text and labels[i] is the label
+                            c_w.writerow([row[-1], labels[i]])
+                    else:
+                        if row[0] in desired_reflections:
+                            c_w.writerow(row)
             else:
                 c_w.writerow(c_r[0])  # write header row
                 for row in c_r[1:]:
-                    if row[-1] in desired_reflections:
+                    if row[-1] in desired_reflections or row[0] in desired_reflections:
                         c_w.writerow(row)
 
             # filter label_sets.csv as well to run validation (below)
@@ -234,7 +250,7 @@ def main():
 
 
 if __name__ == "__main__":
-        main()
+    main()
 
 """
 @inproceedings{passonneau-2006-measuring,
