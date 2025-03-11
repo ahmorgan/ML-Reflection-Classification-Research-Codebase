@@ -107,17 +107,47 @@ def compute_metrics(p) -> dict[str, float]:
     # True labels.
     references = p.label_ids
 
+    # Save the locations of the misclassified reflections for later.
+    misclassified_idx = []
+    for i in range(0, len(references)):
+        if predictions[i] != references[i]:
+            misclassified_idx.append(i)
+
     print(probs)
     print(predictions)
 
     labels = ['IDE and Environment Setup', 'None ', "Other",
               'Python and Coding', 'Time Management and Motivation']
 
-    # Write the raw predictions made by the FastFit model.
+    # Save the training splits used.
+    with open("data-splits/train.csv", "r", encoding="utf-8") as train:
+        trn = list(csv.reader(train))
+        with open("results/train" + results_file[-15:], "w", encoding="utf-8", newline="") as t:
+            c_w = csv.writer(t)
+            c_w.writerows(trn)
+
+    # Read the reflections from the test split used for the raw results file.
+    with open("data-splits/test.csv", "r", encoding="utf-8") as test:
+        tst = list(csv.reader(test))
+        tst_refs = [row[0] for row in tst]
+
+    misclassified = []
+
+    # Write the raw results, which include the predicted label and probabilities for each reflection, and each reflection's text.
     with open(raw_results_file, "w", encoding="utf-8", newline="") as rr:
         c_w = csv.writer(rr)
-        for pred in predictions:
-            c_w.writerow([labels[pred]])
+        c_w.writerow(["", "", "", labels[0], labels[1], labels[2], labels[3], labels[4]])
+        for pred, ref, probs, i in zip(predictions, tst_refs[1:], probs.numpy().tolist(), range(0,len(predictions))):
+            row = [ref, labels[pred], ""]
+            row.extend(probs)
+            if i in misclassified_idx:
+                misclassified.append(row)
+            c_w.writerow(row)
+
+    # Raw results file for only misclassified reflections.
+    with open("results/misclassified" + results_file[-15:], "w", encoding="utf-8", newline="") as m:
+        c_w = csv.writer(m)
+        c_w.writerows(misclassified)
 
     matrix = confusion_matrix(references, predictions, labels=[i for i in range(0, len(labels))])
     report = classification_report(references, predictions, labels=[i for i in range(0, len(labels))], target_names=labels, output_dict=True)
@@ -140,11 +170,6 @@ def compute_metrics(p) -> dict[str, float]:
                 for item in report[label].items():
                     c_w.writerow(item)
             c_w.writerow([])
-
-    # Write the probabilities.
-    with open(raw_results_probs_file, 'w', encoding="utf-8", newline="") as rrpf:
-        c_w = csv.writer(rrpf)
-        c_w.writerows(probs.numpy())
 
     display = ConfusionMatrixDisplay(confusion_matrix=matrix, display_labels=labels)
     display.plot()
@@ -302,7 +327,7 @@ def main():
         hps = {'learning_rate': 1e-5, 'num_epochs': 40, 'batch_size': 16}
 
     # k = number of times to train/test for experiment evaluation
-    k_hp = 5
+    k_hp = 10
 
     start_time = time.time()
 
