@@ -73,6 +73,43 @@ def compute_metrics(y_pred, y_true, y_pred_probs) -> dict[str, float]:
     """
     # Below: single-label evaluation, what I've been using for synchronous experiments
 
+    # Get the locations of the misclassified reflections for later.
+    misclassified_idx = []
+
+    for i in range(0, len(y_true)):
+        if y_pred[i] != y_true[i]:
+            misclassified_idx.append(i)
+
+    # Save the training split used.
+    with open("data-splits/train.csv", "r", encoding="utf-8") as train:
+        trn = list(csv.reader(train))
+        with open("results/train" + results_file[-15:], "w", encoding="utf-8", newline="") as t:
+            c_w = csv.writer(t)
+            c_w.writerows(trn)
+
+    # Read the test split used for writing the raw results file (next).
+    with open("data-splits/test.csv", "r", encoding="utf-8") as test:
+        tst = list(csv.reader(test))
+        tst_refs = [row[0] for row in tst]
+
+    misclassified = []
+
+    # Write the raw results file, which includes the predicted label and probabilities for each reflection, and the reflection text.
+    with open(raw_results_file, "w", encoding="utf-8", newline="") as rr:
+        c_w = csv.writer(rr)
+        c_w.writerow(["", "", "", labels[0], labels[1], labels[2], labels[3], labels[4]])
+        for pred, ref, probs, i in zip(y_pred, tst_refs[1:], y_pred_probs, range(0,len(y_pred))):
+            row = [ref, labels[pred], ""]
+            row.extend(probs)
+            if i in misclassified_idx:
+                misclassified.append(row)
+            c_w.writerow(row)
+
+    # Write the raw results file for only the misclassified reflections.
+    with open("results/misclassified" + results_file[-15:], "w", encoding="utf-8", newline="") as m:
+        c_w = csv.writer(m)
+        c_w.writerows(misclassified)
+
     matrix = confusion_matrix(y_true, y_pred, labels=[i for i in range(0, len(labels))])
     report = classification_report(y_true, y_pred, labels=[i for i in range(0, len(labels))],
                                    target_names=labels, output_dict=True)
@@ -95,18 +132,6 @@ def compute_metrics(y_pred, y_true, y_pred_probs) -> dict[str, float]:
                 for item in report[label].items():
                     c_w.writerow(item)
             c_w.writerow([])
-
-    # writes the raw predictions made by SetFit to another file
-    with open(raw_results_file, "w", encoding="utf-8", newline="") as rr:
-        c_w = csv.writer(rr)
-        for pred in y_pred:
-            c_w.writerow([labels[pred]])
-
-    # writes the predicted probabilities of label class for each reflection
-    with open(raw_results_probs_file, "w", encoding="utf-8", newline="") as rrp:
-        c_w = csv.writer(rrp)
-        for pred in y_pred_probs:
-            c_w.writerow(pred)
 
     display = ConfusionMatrixDisplay(confusion_matrix=matrix, display_labels=labels)
     display.plot()
@@ -394,7 +419,7 @@ def main():
     ### K-Fold Experiments(s) ###
     # Regenerating train/testing splits on every iteration to account for evaluation noise
 
-    k_hp = 5  # number of k-fold iterations.
+    k_hp = 10  # number of k-fold iterations.
 
     # 80P, 10 shot
     for k in range(0, k_hp):
