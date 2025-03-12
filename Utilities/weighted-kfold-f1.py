@@ -8,12 +8,15 @@ from matplotlib import pyplot as plt
 def calculate_weighted_metrics():
     paths = glob.glob("sync_experiment_results/*")
 
+    # Iterating over the resutls for the 10 folds
+    # Paths is the folder containing the experiemnt variation results
     for path in paths:
+        # Files contains the individual fold results for each variation
         files = glob.glob(path + "/*.csv")
         cm_tot = np.zeros((5, 5))
         accs = []
 
-        # summing the confusion matrices to get the total tp, fn, fp counts
+        # summing the confusion matrices element-wise to get the total tp, fn, fp counts
         for file in files:
             print(file)
             with open(file, "r", encoding="utf-8") as f:
@@ -28,6 +31,7 @@ def calculate_weighted_metrics():
 
         avg_acc = sum(accs) / len(files)
 
+        # Getting the tp, fp, fn from the summed confusion matrix for each label class
         # credit: https://stackoverflow.com/questions/31324218/scikit-learn-how-to-obtain-true-positive-true-negative-false-positive-and-fal
         fp_all = cm_tot.sum(axis=0) - np.diag(cm_tot)
         fn_all = cm_tot.sum(axis=1) - np.diag(cm_tot)
@@ -39,6 +43,7 @@ def calculate_weighted_metrics():
         weighted_f1 = 0.0
         weighted_precision = 0.0
         weighted_recall = 0.0
+        # Calculating the F1, precision, recall for each label class based on the fp, fn, tp values calculated previously
         for fp, fn, tp, support in zip(fp_all, fn_all, tp_all, supports):
             check_support += support
             if support != 0:
