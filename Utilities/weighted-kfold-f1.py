@@ -6,6 +6,9 @@ from matplotlib import pyplot as plt
 
 
 def calculate_weighted_metrics():
+    # Please note: I would use scikit-learn here if there existed a function that did the below; cross_val_score() doesn't quite seem to do the trick because I would
+    # need to pass it the classifier
+    
     # Using a folder named sync_experiment_results, which contains nested folders that correspond to the experiment variation;
     # e.g. sync_experiment_results/dR-F-80-10/...
     # Each subfolder contains the 10-fold results for that experiment variation, with one file per fold
