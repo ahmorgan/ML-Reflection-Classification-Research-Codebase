@@ -1,0 +1,14 @@
+setfit==1.0.3
+huggingface-hub==0.23.5
+transformers==4.43.3
+torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu124
+optuna
+numpy
+scikit-learn
+openai
+pandas
+openpyxl
+matplotlib
+nltk
+fast-fit
+datasets==2.21.0
