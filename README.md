@@ -1,7 +1,7 @@
-# Codebase for my contributions to Fall 2024 OUR Research Scholars project + Spring 2025 Research Assistantship
+# Codebase for my contributions to the student reflection classification research project.
 # Fall Poster: Comparative Analysis of Resource-Efficient Multi-Label Text Classification Methods: GPT-4o vs fine-tuning with SetFit
-# Spring paper: "A Comparison of Machine Learning Approaches for Student Challenge Classification" By Sandra Wiktor, Dr. Mohsen Dorodchi, Eunyoung Kim, Andrew Morgan, Nicole Wiktor, Frank Garcia
-This repository contains all code created for the above projects. I could not include the train/test datasets I used for SetFit/GPT-4o or the raw data I used for train/test dataset construction for research ethics purposes.
+# Spring paper: "A Comparison of Machine Learning Approaches for Student Challenge Classification" By Sandra Wiktor, Dr. Mohsen Dorodchi, Eunyoung Kim, Andrew Morgan
+This repository contains all of my code created for the above projects. I could not include the train/test datasets I used or the raw data I used for train/test dataset construction for research ethics purposes.
 
 Dependencies required (latest versions if not specified otherwise):
 SetFit - setfit ver 1.0.3, huggingface-hub ver 0.23.5, transformers ver 4.43.3, torch/torchaudio/torchvision ver 2.4.1+cu124, optuna, numpy, sklearn |
