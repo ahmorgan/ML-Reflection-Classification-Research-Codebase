@@ -53,13 +53,13 @@ integer2issue = {
 
 primary_labels = []
 
-
-# METHOD PARAMETERS
-# files: the intermediary annotations obtained from the datasets in raw_data, generated in organize.py
-# output_file: name to assign to file which contains the final consensus dataset
-# include_other: whether or not to include the "other" column. If not, any reflection with the "other"
-#   label will remain in the dataset, just stripped of the "other" label
 def construct_dataset(files, output_file, dataset_name):
+    """
+    Constructs a multi-label dataset from given files.
+    :param files: the intermediary annotations obtained from the datasets in raw_data, generated in organize.py
+    :param output_file: name to assign to file which contains the final consensus dataset
+    :param dataset_name: the name of the dataset being processed
+    """
     print(f"Processing files in {dataset_name}...\n")
     # CONSENSUS LABELING METHODOLOGY
     # **************************************
@@ -232,7 +232,6 @@ def align_subreflections(reflections):
             else:
                 print("Ref skipped!")
             print()
-    print(len(full_refs))
     # indices of rows to remove from dataframe of gpt_reflections
     # each row referenced in remove is one in full_refs
     remove = []
@@ -245,10 +244,8 @@ def align_subreflections(reflections):
     # up the entire reflections
     df = pd.DataFrame(full_refs)
     # drop undesired rows simultaneously and overwrite gpt_reflections.csv with new truncated data
-    print(len(df))
     if remove:
         df.drop(remove, inplace=True)
-    print(len(df))
     df.to_csv("reflection_substrings.csv", index=False, header=False)
 
     # Note: I can't just return a csv of reflections_sanitized because I want gpt_reflections.csv
@@ -332,7 +329,7 @@ def main():
     # Choose which labels to exclude in the final generated multilabel training dataset
     exclude_labels = ["Assignments", "Quizzes", "Learning New Material", "Personal Issue"]
     # TODO write in support for secondary labels
-    label_category = "Primary"  # CAUTION: as of 1/28 I have not written in full support for the secondary label category -- COMING SOON
+    label_category = "Primary"  # CAUTION: as of 1/28 I have not written in full support for the secondary label category
 
     if exclude_labels:
         # remove unwanted labels
