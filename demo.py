@@ -14,6 +14,9 @@ Reflection Classification Library
 written by Andrew Morgan
 a part of Dr. Mohsen Dorodchi's Text Analytics Lab at UNC Charlotte, for the student reflection classification project
 
+To run the demo, please put the data here in your working directory (private to only current reflection classification
+researchers as of 5/20/25): https://drive.google.com/drive/folders/1Nicswyyy57tw3YmIXx4gTX3QxdmXB6TD?usp=sharing
+
 A complete implementation of our reflection classification pipeline. Provides a simple interface for dataset construction/preprocessing 
 and SetFit/FastFit training. Could be a sort of neat, operationalized final product attached to our paper.
 We could add Eunyoung's clustering/transformers code and Sandra's GPT-4o code in the future.
