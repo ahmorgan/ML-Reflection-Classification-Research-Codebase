@@ -36,7 +36,7 @@ print()
 r1 = []
 r2 = []
 for ref_set in individual_reflection_datasets.keys():
-    if ref_set[-1] == "1":  # reflection 1
+    if ref_set[-1] == "1":  # reflection 1; ref_set == "D-ESA4-1", for example
         if not r1:
             r1.extend(individual_reflection_datasets[ref_set])  # individual_reflection_datasets maps reflection names to the consensus dataset for that reflection
         else:  # avoid writing the header twice
@@ -120,7 +120,9 @@ other_reflections = pd.concat([r1_80_other_reflections, r2_80_other_reflections]
 supplement_labels = ["IDE and Package Installation", "Time Management and Motivation",
                      "API", "Python and Coding", "None", "Group Work", "Other"]
 
-# Though you could supplement from all reflection sets if you wanted
+# FOR A FULL REPLICATION, please do max-shot supplementing with all reflection sets, which is what I did originally.
+# I just did two here to avoid making the demo too long. Adding more reflection sets is just a matter of
+# copy-and-pasting all of the function calls and replacing them with relevant details/variables for r3 and r4.
 all_datasets = {
     "r1_80": copy.deepcopy(r1_80),
     "r2_80": copy.deepcopy(r2_80)
