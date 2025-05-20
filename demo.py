@@ -117,8 +117,6 @@ r2_80, r2_80_other_reflections = du.collapse_into_other(input_dataset=r2_80, oth
 
 other_reflections = pd.concat([r1_80_other_reflections, r2_80_other_reflections])
 
-print(other_reflections.head())
-
 supplement_labels = ["IDE and Package Installation", "Time Management and Motivation",
                      "API", "Python and Coding", "None", "Group Work", "Other"]
 
