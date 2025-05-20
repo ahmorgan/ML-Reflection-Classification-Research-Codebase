@@ -7,6 +7,7 @@ import train_setfit
 import weighted_kfold_results as wkf
 
 import pandas as pd
+import copy
 
 """
 Reflection Classification Library
@@ -109,18 +110,25 @@ other_labels = ["Understanding requirements and instructions", "SDLC", "MySQL", 
                 "Course Structure and Materials", "Other (Secondary Issue)", "HTML"]
 
 r1_80, r1_80_other_reflections = du.collapse_into_other(input_dataset=r1_80, other_labels=other_labels)
+
+other_labels.remove("Github")  # reflection two does not have "Github" as "Other"
+
 r2_80, r2_80_other_reflections = du.collapse_into_other(input_dataset=r2_80, other_labels=other_labels)
 
 other_reflections = pd.concat([r1_80_other_reflections, r2_80_other_reflections])
 
+print(other_reflections.head())
+
 supplement_labels = ["IDE and Package Installation", "Time Management and Motivation",
                      "API", "Python and Coding", "None", "Group Work", "Other"]
 
+# Though you could supplement from all reflection sets if you wanted
 all_datasets = {
-    "r1_80": r1_80,
-    "r2_80": r2_80
+    "r1_80": copy.deepcopy(r1_80),
+    "r2_80": copy.deepcopy(r2_80)
 }
 
+other_labels.append("Github")
 # "max-shot": adds labels from other reflections to each label class from supplement_labels for each reflection
 r1_80 = du.supplement_label_classes(all_datasets=all_datasets,
                                               supplement_dataset_name="r1_80",
@@ -147,12 +155,14 @@ with open("sl-r1-80.csv", "w", encoding="utf-8", newline="") as d:
     writer = csv.writer(d)
     writer.writerows(r1_80)
 
+# You can also write r2_80 to a file and run experiments with it too; just r1_80 for demonstration
+
 # Executes a single k-fold experiment.
 # Results written to automatically created /results/ directory.
 train_fastfit.fastfit_experiment(
     dataset_file_name="sl-r1-80.csv",
     shot=10,
-    k_hp=2,
+    k_hp=10,
     hps={
         "body_learning_rate": 1e-5,
         "num_epochs": 40,
@@ -168,7 +178,7 @@ train_fastfit.fastfit_experiment(
 train_setfit.setfit_experiment(
     dataset_file_name="sl-r1-80.csv",
     shot=10,
-    k_hp=2,  # 10
+    k_hp=10,
     hps={
         "body_learning_rate": 2e-5,
         "num_epochs": 1,
