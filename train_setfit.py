@@ -22,6 +22,8 @@ confusion_matrix_file = "results/setfit/confusion_matrix.png"
 
 current_model = "paraphrase-distilroberta-base-v2"
 
+device_name = "cuda"
+
 dataset_label_set = []
 
 
@@ -143,8 +145,9 @@ def compute_metrics(y_pred, y_true, y_pred_probs) -> dict[str, float]:
 # model instantiation for each trial run of the hyperparameter search
 def model_init(params):
     global current_model
+    global device_name
     params = {  # "multi_target_strategy": "one-vs-rest",
-              "device": torch.device("cuda")}
+              "device": torch.device(device_name)}
     return SetFitModel.from_pretrained(f"sentence-transformers/{current_model}", **params)
 
 
@@ -370,7 +373,7 @@ def _update_file_paths(results, raw_results, raw_results_probs, cm):
     confusion_matrix_file = cm
 
 
-def inference(inference_dataset=None, inference_hps=None, inference_model="stsb-roberta-base-v2", inference_variation="r1_100_20"):
+def inference(inference_dataset=None, inference_hps=None, inference_model="stsb-roberta-base-v2", inference_variation="r1_100_20", device="cuda"):
     """
     WIP
 
@@ -378,8 +381,13 @@ def inference(inference_dataset=None, inference_hps=None, inference_model="stsb-
     :param inference_hps:
     :param inference_model:
     :param inference_variation:
+    :param device:
     :return:
     """
+    if device == "mps":
+        global device_name
+        device_name = device
+
     if not inference_dataset:
         raise ValueError("Please specify at least a dataset for inference.")
     if not inference_hps:
@@ -409,7 +417,7 @@ def inference(inference_dataset=None, inference_hps=None, inference_model="stsb-
     return None
 
 
-def setfit_experiment(dataset_file_name, shot, k_hp, hps, models, do_hp_search):
+def setfit_experiment(dataset_file_name, shot, k_hp, hps, models, do_hp_search, device="cuda"):
     """
     Runs a single k-fold SetFit experiment based on the specified parameters. To input datasets, make sure you have the dataset
     as a csv file saved locally, and pass in the dataset's file name to dataset_file_name.
@@ -426,13 +434,19 @@ def setfit_experiment(dataset_file_name, shot, k_hp, hps, models, do_hp_search):
     :param hps: dictionary of structure {'body_learning_rate': _, 'num_epochs': _, 'batch_size': _}, respective suggestions: 2e-5, 1, 16
     :param do_hp_search: whether or not to do a hyperparameter search
     :param models: list of names of Sentence Transformers available through Hugging Face
+    :param device: "cuda" by default, can be "mps"
     :return: None or a dictionary of hyperparameters if do_hp_search=True
     """
     # Experiment sequence
     # HP searches -> apply hyperparameters
     # k-fold experiments
 
-    print(f"Running on GPU: {torch.cuda.is_available()}")
+    if device == "mps":
+        print(f"Running on Apple silicon GPU: {torch.backends.mps.is_available()}")
+        global device_name
+        device_name = device
+    else:
+        print(f"Running on CUDA GPU: {torch.cuda.is_available()}")
 
     if not os.path.isdir("results"):
         os.mkdir("results")

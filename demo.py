@@ -12,6 +12,9 @@ import copy
 """
 Reflection Classification Library
 
+# add instructions for altering source code
+# add instructions for running all experiments 
+
 written by Andrew Morgan
 a part of Dr. Mohsen Dorodchi's Text Analytics Lab at UNC Charlotte, for the student reflection classification project
 
@@ -31,21 +34,10 @@ full_multi_label_dataset, individual_reflection_datasets, annotation_label_sets,
                                                                                                                                    label_category=label_category)
 
 # Reflection set construction
-print(individual_reflection_datasets.keys())
-print()
-r1 = []
-r2 = []
-for ref_set in individual_reflection_datasets.keys():
-    if ref_set[-1] == "1":  # reflection 1; ref_set == "D-ESA4-1", for example
-        if not r1:
-            r1.extend(individual_reflection_datasets[ref_set])  # individual_reflection_datasets maps reflection names to the consensus dataset for that reflection
-        else:  # avoid writing the header twice
-            r1.extend(individual_reflection_datasets[ref_set][1:])
-    if ref_set[-1] == "2":  # reflection 2
-        if not r2:
-            r2.extend(individual_reflection_datasets[ref_set])
-        else:
-            r2.extend(individual_reflection_datasets[ref_set][1:])
+reflection_sets = dc.construct_reflection_sets(individual_reflection_datasets=individual_reflection_datasets,
+                                               reflection_sets=["r1", "r2"])
+r1 = reflection_sets["r1"]
+r2 = reflection_sets["r2"]
 
 # Agreement will be increased to at least the threshold
 r1_80 = df.filter_dataset(kalpha_agreement_threshold=0.8,
@@ -60,7 +52,6 @@ r2_80 = df.filter_dataset(kalpha_agreement_threshold=0.8,
                           label_sets=annotation_label_sets)
 
 ### Handling new annotations
-
 # Generate datasets with consensus labels for the none and controversial annotations
 none_consensus = du.single_label_consensus(input_folder="none_annotations")
 contr_consensus = du.single_label_consensus(input_folder="controversial_annotations")
@@ -172,7 +163,8 @@ train_fastfit.fastfit_experiment(
         "paraphrase-distilroberta-base-v2",
         "stsb-roberta-base-v2"
     ],
-    do_hp_search=False
+    do_hp_search=False,
+    # device="mps"  # --> uncomment to use Apple silicon GPUs (probably)
 )
 
 train_setfit.setfit_experiment(
@@ -188,7 +180,8 @@ train_setfit.setfit_experiment(
         "paraphrase-distilroberta-base-v2",
         "stsb-roberta-base-v2"
     ],
-    do_hp_search=False
+    do_hp_search=False,
+    # device="mps"  # --> uncomment to use Apple silicon GPUs (probably)
 )
 
 # Calculate the weighted kfold metrics for each set of raw kfold results

@@ -177,7 +177,7 @@ def compute_metrics(p) -> dict[str, float]:
     return {"F1": f1}
 
 
-def _training_iteration(hps=None, do_hp_search=False, train_file="data-splits/train.csv", test_file="data-splits/test.csv"):
+def _training_iteration(hps=None, do_hp_search=False, train_file="data-splits/train.csv", test_file="data-splits/test.csv", device="cuda"):
     # Instructions: First, you must alter the FastFit source code in a couple ways, as
     # it's outdated in some spots (and really not the most robust library).
     # First, under set_trainer() in the FastFitTrainer class, add the parameter "trust_remote_code=True"
@@ -198,7 +198,10 @@ def _training_iteration(hps=None, do_hp_search=False, train_file="data-splits/tr
     # Hyperparameters can also be set manually in the FastFitTrainer constructor call.
 
     # If this prints False, make sure you have CUDA installed + a CUDA capable GPU + the CUDA version of PyTorch
-    print(f"Running on GPU: {torch.cuda.is_available()}")
+    if device == "mps":
+        print(f"Running on Apple silicon GPU: {torch.backends.mps.is_available()}")
+    else:
+        print(f"Running on CUDA GPU: {torch.cuda.is_available()}")
 
     dataset = load_dataset('csv', data_files={
         "train": train_file,
@@ -232,7 +235,8 @@ def _training_iteration(hps=None, do_hp_search=False, train_file="data-splits/tr
                 max_text_length=128,
                 dataloader_drop_last=False,
                 num_repeats=4,  # number suggested by the FastFit developers
-                compute_metrics=compute_metrics
+                compute_metrics=compute_metrics,
+                device=device
             )
 
             search_trainer.train()
@@ -263,10 +267,11 @@ def _training_iteration(hps=None, do_hp_search=False, train_file="data-splits/tr
             max_text_length=128,  # 128 suggested by FastFit developers
             dataloader_drop_last=False,
             num_repeats=4,  # best_params["repeats"]
-            compute_metrics=compute_metrics  # <-- see instructions at top of main()
+            compute_metrics=compute_metrics,  # <-- see instructions at top of main()
+            device=device
         )
 
-        model = trainer.train()
+        trainer.train()
 
         trainer.evaluate()
 
@@ -277,7 +282,7 @@ def _training_iteration(hps=None, do_hp_search=False, train_file="data-splits/tr
         return None
 
 
-def inference(inference_dataset=None, inference_hps=None, inference_model="stsb-roberta-base-v2", inference_variation="r1_100_20"):
+def inference(inference_dataset=None, inference_hps=None, inference_model="stsb-roberta-base-v2", inference_variation="r1_100_20", device="cuda"):
     """
         WIP
 
@@ -285,6 +290,7 @@ def inference(inference_dataset=None, inference_hps=None, inference_model="stsb-
         :param inference_hps:
         :param inference_model:
         :param inference_variation:
+        :param device:
         :return:
         """
     if not inference_dataset:
@@ -305,10 +311,11 @@ def inference(inference_dataset=None, inference_hps=None, inference_model="stsb-
                        f"results/fastfit/{inference_dataset}-raw_results_{reflection_set}_{agreement}_{shot}.csv",
                        f"results/fastfit/{inference_dataset}-probs_{reflection_set}_{agreement}_{shot}.csv",
                        f"results/fastfit/{inference_dataset}-cm_{reflection_set}_{agreement}_{shot}.png")
-    _training_iteration(hps=inference_hps, test_file=f"{inference_dataset}.csv")
+    _training_iteration(hps=inference_hps, test_file=f"{inference_dataset}.csv", device=device)
     training_times.update({f"{inference_dataset}_{reflection_set}_{agreement}_{shot}": datetime.timedelta(
         seconds=time.time() - start_time)})
-    torch.cuda.empty_cache()
+    if device == "cuda":
+        torch.cuda.empty_cache()
 
     with open(f"results/fastfit/{inference_dataset}_time.csv", "w", encoding="utf-8", newline="") as ifd:
         c_w = csv.writer(ifd)
@@ -328,7 +335,7 @@ def _update_file_paths(results, raw_results, raw_results_probs, cm):
     confusion_matrix_file = cm
 
 
-def fastfit_experiment(dataset_file_name, shot, k_hp, hps, models, do_hp_search):
+def fastfit_experiment(dataset_file_name, shot, k_hp, hps, models, do_hp_search, device="cuda"):
     """
     Runs a single k-fold FastFit experiment based on the specified parameters. To input datasets, make sure you have the dataset
     as a csv file saved locally, and pass in the dataset's file name to dataset_file_name.
@@ -345,6 +352,7 @@ def fastfit_experiment(dataset_file_name, shot, k_hp, hps, models, do_hp_search)
     :param hps: dictionary of structure {'body_learning_rate': _, 'num_epochs': _, 'batch_size': _}, respective suggestions: 1e-5, 40, 16
     :param do_hp_search: whether or not to do a hyperparameter search
     :param models: list of names of Sentence Transformers available through Hugging Face
+    :param device: "cuda" by default, can be "mps"
     :return: None or a dictionary of hyperparameters if do_hp_search=True
     """
     # Experiment sequence
@@ -377,7 +385,8 @@ def fastfit_experiment(dataset_file_name, shot, k_hp, hps, models, do_hp_search)
                        test_file="data-splits/test_80_hps.csv")
         hps = _training_iteration(do_hp_search=True,
                                   train_file="data-splits/train_80_hps.csv",
-                                  test_file="data-splits/test_80_hps.csv")
+                                  test_file="data-splits/test_80_hps.csv",
+                                  device=device)
         training_times.update({"hp_search": datetime.timedelta(seconds=start_time - time.time())})
         return hps
 
@@ -388,7 +397,8 @@ def fastfit_experiment(dataset_file_name, shot, k_hp, hps, models, do_hp_search)
     for model in models:
         current_model = model
         for k in range(0, k_hp):
-            torch.cuda.empty_cache()
+            if device == "cuda":
+                torch.cuda.empty_cache()
 
             # update paths used in compute_metrics() to log results
             # would pass these as parameters to compute_metrics() but
@@ -398,7 +408,7 @@ def fastfit_experiment(dataset_file_name, shot, k_hp, hps, models, do_hp_search)
                                f"results/fastfit/{current_model}_probs_{dataset_name}_{str(shot)}_" + str(k) + ".csv",
                                f"results/fastfit/{current_model}_cm_{dataset_name}_{str(shot)}_" + str(k) + ".png")
             _create_splits(dataset_file=dataset_file_name, shot=shot)
-            _training_iteration(hps=hps)
+            _training_iteration(hps=hps, device=device)
 
         training_times.update({f"{dataset_name}, {current_model}, 80, 10 shot": datetime.timedelta(seconds=time.time() - start_time)})
         print(f"Experiment duration: {datetime.timedelta(seconds=time.time() - start_time)}")

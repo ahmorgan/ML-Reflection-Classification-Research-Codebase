@@ -457,4 +457,24 @@ def test_match(manual_check):
 """
 
 
+def construct_reflection_sets(individual_reflection_datasets, reflection_sets):
+    """
+    Extract and construct only the reflection sets specified in param reflection_sets from all the sub-datasets in
+    individual_reflection_datasets.
+
+    :param individual_reflection_datasets: dictionary of sub-datasets (dont really have a good name for these; e.g., D-ESA4-1). Returned by construct_multilabel_datasets(). All dictionary keys must have the reflection set number as the last character.
+    :param reflection_sets: List of strings of what reflection sets to construct (e.g., ["r1", "r2" ...]). Must be formatted that way ('r' + ref_number).
+    :return: A list of the constructed datasets.
+    """
+
+    refs = {ref_name: [] for ref_name in reflection_sets}
+    for ref_set in individual_reflection_datasets.keys():
+        if ref_set[-1] not in [ref_name[-1] for ref_name in reflection_sets]:
+            continue
+        if not refs['r' + ref_set[-1]]:
+            refs['r' + ref_set[-1]].extend(individual_reflection_datasets[ref_set])  # individual_reflection_datasets maps reflection names to the consensus dataset for that reflection
+        else:  # avoid writing the header twice
+            refs['r' + ref_set[-1]].extend(individual_reflection_datasets[ref_set][1:])
+
+    return refs
 
