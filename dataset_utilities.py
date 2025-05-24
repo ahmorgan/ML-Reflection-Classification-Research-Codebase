@@ -75,6 +75,7 @@ def single_label_consensus(input_folder, only_100=False, exclude_controversial=F
     if "sources" in consensus.columns:
         consensus_temp["sources"] = consensus["sources"]
 
+    assert [row[0] for row in consensus.to_numpy()] == [row[0] for row in consensus_temp.to_numpy()]
     if exclude_controversial:
         consensus_temp = consensus_temp[consensus_temp["label"] != "Controvercial"]
 
@@ -105,7 +106,6 @@ def single_label_consensus(input_folder, only_100=False, exclude_controversial=F
 
     if not exclude_controversial:
         assert len(consensus) == len(consensus_temp), f"{len(consensus)}, {len(consensus_temp)}"
-    assert [row[0] for row in consensus.to_numpy()] == [row[0] for row in consensus_temp.to_numpy()]
 
     return consensus_temp.to_numpy().tolist()
 

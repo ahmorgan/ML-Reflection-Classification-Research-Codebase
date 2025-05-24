@@ -54,7 +54,7 @@ r2_80 = df.filter_dataset(kalpha_agreement_threshold=0.8,
 ### Handling new annotations
 # Generate datasets with consensus labels for the none and controversial annotations
 none_consensus = du.single_label_consensus(input_folder="none_annotations")
-contr_consensus = du.single_label_consensus(input_folder="controversial_annotations")
+contr_consensus = du.single_label_consensus(input_folder="controversial_annotations", exclude_controversial=True)
 
 # Fiddly nuance: our none and controversial annotations contains reflections from r1,2,3, and 4, so get only the reannotated reflections from r1
 # Ideally, re-annotations would already be exclusive to a single reflection set
@@ -181,7 +181,7 @@ train_setfit.setfit_experiment(
         "stsb-roberta-base-v2"
     ],
     do_hp_search=False,
-    # device="mps"  # --> uncomment to use Apple silicon GPUs (probably)
+    # device="mps"  # --> uncomment to use Apple silicon GPUs
 )
 
 # Calculate the weighted kfold metrics for each set of raw kfold results
