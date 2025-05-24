@@ -2,11 +2,13 @@
 ## A user-friendly library for student reflection datasets and classification
 #### Library written by Andrew Morgan, working with Sandra Wiktor, Eunyoung Kim, and Dr. Mohsen Dorodchi. A part of the student reflection classification project in Dr. Dorodchi's Text Analytics lab at the University of North Carolina at Charlotte.
 
-(preliminary): train_setfit and train_fastfit use CUDA (device="cuda") by default, and requirements.txt attempts to install torch 2.4.1+cu124. If you're on a Mac and using Apple silicon/mps, pass the parameter device="mps" to calls to train_setfit and train_fastfit to change to PyTorch's mps backend. If on a Mac, you shouldn't have to edit requirements.txt to use GPU acceleration with PyTorch.
+Before running this code/demo.py, make sure you have the raw annotation data and re-annotation data folders from here (private Google Folder): https://drive.google.com/drive/folders/1Nicswyyy57tw3YmIXx4gTX3QxdmXB6TD?usp=sharing in the same directory as all other files.
 
 All functions have docstrings that explain correct usage; use them for guidance and demo.py for examples. Note that this code requires the use of proprietary data.
 
 Unfortunately, due to shortcomings with FastFit and SetFit's interfaces (and a backwards compatibility bug with the transformers library), this code requires specially altered versions of those libraries' source codes to run. Provided in altered_dependency_files are the files that must be replaced in the necessary libraries (after installing them in requirements.txt). 
+
+(preliminary): train_setfit and train_fastfit use CUDA (device="cuda") by default, and requirements.txt attempts to install torch 2.4.1+cu124. If you're on a Mac and using Apple silicon/mps, pass the parameter device="mps" to calls to train_setfit and train_fastfit to change to PyTorch's mps backend. If on a Mac, you shouldn't have to edit requirements.txt to use GPU acceleration with PyTorch.
 
 # Experiment replication instructions:
 These are complete instructions on how to implement every part of our methodology that I implemented using this library and high-level descriptions of each important function. This should provide everything you need to easily replicate all experiments with FastFit and SetFit in a small number of function calls.
