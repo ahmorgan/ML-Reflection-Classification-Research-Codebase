@@ -309,7 +309,7 @@ def _create_splits(dataset_file, shot, train_file="data-splits/train.csv", test_
                 row[1] = "Other"
             if row[1] == "None":
                 row[1] = "None "
-            if row[0] in ["N/A", "n/a", "N/a", "na", "NA", "None", "none"]:
+            if row[0] in ["N/A", "n/a", "N/a", "na", "NA", "None", "none", ""]:
                 row[0] = row[0] + " "
             if row[0] is None:
                 row[0] = "None "

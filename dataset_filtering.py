@@ -245,13 +245,13 @@ def filter_dataset(kalpha_agreement_threshold, single_label, full_dataset, label
                                                                      label_sets=label_sets)
 
     # Zero in on a dataset with a high Krippendorff's alpha
-    epsilon = 0.05
+    epsilon = 0.01
     while dataset_kalpha < kalpha_agreement_threshold:
         singlelabel_dataset_filtered, dataset_kalpha = _filter_dataset(masi_agreement_threshold=epsilon,
                                                                          single_label=single_label,
                                                                          full_dataset=singlelabel_dataset_filtered,
                                                                          label_sets=label_sets)
-        epsilon += 0.05
+        epsilon += 0.01
 
     print(f"Krippendorff's alpha of new dataset: {dataset_kalpha} with dataset length: {len(singlelabel_dataset_filtered)}")
 

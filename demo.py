@@ -35,9 +35,11 @@ full_multi_label_dataset, individual_reflection_datasets, annotation_label_sets,
 
 # Reflection set construction
 reflection_sets = dc.construct_reflection_sets(individual_reflection_datasets=individual_reflection_datasets,
-                                               reflection_sets=["r1", "r2"])
+                                               reflection_sets=["r1", "r2", "r3", "r4"])
 r1 = reflection_sets["r1"]
 r2 = reflection_sets["r2"]
+r3 = reflection_sets["r3"]
+r4 = reflection_sets["r4"]
 
 # Agreement will be increased to at least the threshold
 r1_80 = df.filter_dataset(kalpha_agreement_threshold=0.8,
@@ -49,6 +51,16 @@ r1_80 = df.filter_dataset(kalpha_agreement_threshold=0.8,
 r2_80 = df.filter_dataset(kalpha_agreement_threshold=0.8,
                           single_label=True,
                           full_dataset=r2,
+                          label_sets=annotation_label_sets)
+
+r3_80 = df.filter_dataset(kalpha_agreement_threshold=0.8,
+                          single_label=True,
+                          full_dataset=r3,
+                          label_sets=annotation_label_sets)
+
+r4_80 = df.filter_dataset(kalpha_agreement_threshold=0.8,
+                          single_label=True,
+                          full_dataset=r4,
                           label_sets=annotation_label_sets)
 
 ### Handling new annotations
@@ -66,13 +78,27 @@ r1_contr_consensus = [row for row in contr_consensus if row[0] in r1_text]
 r1_80 = du.add_new_refs_to_dataset(input_dataset=r1_80, integrate_data=r1_none_consensus)
 r1_80 = du.add_new_refs_to_dataset(input_dataset=r1_80, integrate_data=r1_contr_consensus)
 
-# Do the same thing for r2
+# Do the same thing for r2, 3, and 4
 r2_text = [row[0] for row in r2_80]
 r2_none_consensus = [row for row in none_consensus if row[0] in r2_text]
 r2_contr_consensus = [row for row in contr_consensus if row[0] in r2_text]
 
 r2_80 = du.add_new_refs_to_dataset(input_dataset=r2_80, integrate_data=r2_none_consensus)
 r2_80 = du.add_new_refs_to_dataset(input_dataset=r2_80, integrate_data=r2_contr_consensus)
+
+r3_text = [row[0] for row in r3_80]
+r3_none_consensus = [row for row in none_consensus if row[0] in r3_text]
+r3_contr_consensus = [row for row in contr_consensus if row[0] in r3_text]
+
+r3_80 = du.add_new_refs_to_dataset(input_dataset=r3_80, integrate_data=r3_none_consensus)
+r3_80 = du.add_new_refs_to_dataset(input_dataset=r3_80, integrate_data=r3_contr_consensus)
+
+r4_text = [row[0] for row in r4_80]
+r4_none_consensus = [row for row in none_consensus if row[0] in r4_text]
+r4_contr_consensus = [row for row in contr_consensus if row[0] in r4_text]
+
+r4_80 = du.add_new_refs_to_dataset(input_dataset=r4_80, integrate_data=r4_none_consensus)
+r4_80 = du.add_new_refs_to_dataset(input_dataset=r4_80, integrate_data=r4_contr_consensus)
 
 ### Alter reflection text to include the questions the student is responding to, and the student's subresponses
 
@@ -88,12 +114,16 @@ print("Constructing split reflection dataset...")
 # Split the reflections in the target dataset into sub-responses (basically, integrate the subreflections into the dataset)
 r1_80 = du.construct_split_reflection_dataset(input_dataset=r1_80, subreflections=subreflections, questions=questions)
 r2_80 = du.construct_split_reflection_dataset(input_dataset=r2_80, subreflections=subreflections, questions=questions)
+r3_80 = du.construct_split_reflection_dataset(input_dataset=r3_80, subreflections=subreflections, questions=questions)
+r4_80 = du.construct_split_reflection_dataset(input_dataset=r4_80, subreflections=subreflections, questions=questions)
 
 print("Converting split reflection dataset into a question prepended dataset...")
 # Then prepend the questions each sub-response is answering to each sub-response (convert the multiple columns with student responses
 # into one integrated text column in the format "{question} {answer} {question} {answer} ... ")
 r1_80 = du.construct_question_prepended_refs(input_dataset=r1_80)
 r2_80 = du.construct_question_prepended_refs(input_dataset=r2_80)
+r3_80 = du.construct_question_prepended_refs(input_dataset=r3_80)
+r4_80 = du.construct_question_prepended_refs(input_dataset=r4_80)
 
 print("Converting dataset to proficiency label dataset (converting labels to 'Other')...")
 
@@ -102,24 +132,31 @@ other_labels = ["Understanding requirements and instructions", "SDLC", "MySQL", 
 
 r1_80, r1_80_other_reflections = du.collapse_into_other(input_dataset=r1_80, other_labels=other_labels)
 
-other_labels.remove("Github")  # reflection two does not have "Github" as "Other"
+other_labels.remove("Github")  # reflection 2,3,4 do not have "Github" as "Other"
 
 r2_80, r2_80_other_reflections = du.collapse_into_other(input_dataset=r2_80, other_labels=other_labels)
 
-other_reflections = pd.concat([r1_80_other_reflections, r2_80_other_reflections])
+other_labels.remove("MySQL")  # reflection 3,4 do not have "MySQL" as "Other"
+
+r3_80, r3_80_other_reflections = du.collapse_into_other(input_dataset=r3_80, other_labels=other_labels)
+r4_80, r4_80_other_reflections = du.collapse_into_other(input_dataset=r4_80, other_labels=other_labels)
+
+other_reflections = pd.concat([r1_80_other_reflections, r2_80_other_reflections, r3_80_other_reflections, r4_80_other_reflections])
 
 supplement_labels = ["IDE and Package Installation", "Time Management and Motivation",
                      "API", "Python and Coding", "None", "Group Work", "Other"]
 
 # FOR A FULL REPLICATION, please do max-shot supplementing with all reflection sets, which is what I did originally.
-# I just did two here to avoid making the demo too long. Adding more reflection sets is just a matter of
-# copy-and-pasting all of the function calls and replacing them with relevant details/variables for r3 and r4.
+# The demo below includes all reflection sets.
 all_datasets = {
     "r1_80": copy.deepcopy(r1_80),
-    "r2_80": copy.deepcopy(r2_80)
+    "r2_80": copy.deepcopy(r2_80),
+    "r3_80": copy.deepcopy(r3_80),
+    "r4_80": copy.deepcopy(r4_80)
 }
 
 other_labels.append("Github")
+other_labels.append("MySQL")
 # "max-shot": adds labels from other reflections to each label class from supplement_labels for each reflection
 r1_80 = du.supplement_label_classes(all_datasets=all_datasets,
                                               supplement_dataset_name="r1_80",
@@ -139,8 +176,27 @@ r2_80 = du.supplement_label_classes(all_datasets=all_datasets,
                                               other_refs=other_reflections,
                                               other_labels=other_labels)
 
+other_labels.remove("MySQL")
+supplement_labels.append("MySQL")
+
+r3_80 = du.supplement_label_classes(all_datasets=all_datasets,
+                                              supplement_dataset_name="r3_80",
+                                              supplement_labels=supplement_labels,
+                                              increase_to="max",  # "shot"
+                                              other_refs=other_reflections,
+                                              other_labels=other_labels)
+
+r4_80 = du.supplement_label_classes(all_datasets=all_datasets,
+                                              supplement_dataset_name="r4_80",
+                                              supplement_labels=supplement_labels,
+                                              increase_to="max",  # "shot"
+                                              other_refs=other_reflections,
+                                              other_labels=other_labels)
+
 r1_80 = du.challenge_column_only(input_dataset=r1_80)
 r2_80 = du.challenge_column_only(input_dataset=r2_80)
+r3_80 = du.challenge_column_only(input_dataset=r3_80)
+r4_80 = du.challenge_column_only(input_dataset=r4_80)
 
 with open("sl-r1-80.csv", "w", encoding="utf-8", newline="") as d:
     writer = csv.writer(d)
@@ -157,7 +213,7 @@ train_fastfit.fastfit_experiment(
     hps={
         "body_learning_rate": 1e-5,
         "num_epochs": 40,
-        "batch_size": 4
+        "batch_size": 16
     },
     models=[
         "paraphrase-distilroberta-base-v2",
@@ -174,7 +230,7 @@ train_setfit.setfit_experiment(
     hps={
         "body_learning_rate": 2e-5,
         "num_epochs": 1,
-        "batch_size": 4
+        "batch_size": 16
     },
     models=[
         "paraphrase-distilroberta-base-v2",

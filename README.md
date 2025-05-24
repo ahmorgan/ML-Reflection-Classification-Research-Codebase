@@ -97,6 +97,8 @@ Remove labels from other_labels as necessary (in the above, remove Github, which
                                               other_labels=other_labels)
 First, we need the un-converted "Other" reflections to maximize the bank of reflections available for supplementing label classes. Also pass in all_datasets to specify where our main bank of supplement reflections comes from. 
 Again, you should change what labels are being supplemented based on the reflection set. You should also update other_labels as you update the reflection sets as well.
+
+Please note that we used all reflection sets to supplement labels in our original experiments, and you should do the same when replicating. 
 ## Converting text to challenge-column only
     r1_80 = du.challenge_column_only(input_dataset=r1_80)
 Very simple, just a call to challenge_column_only(). Edits the dataset text in-place.
