@@ -361,8 +361,8 @@ def fastfit_experiment(dataset_file_name, shot, k_hp, hps, models, do_hp_search,
 
     if not os.path.isdir("results"):
         os.mkdir("results")
-    if not os.path.isdir("results/setfit"):
-        os.mkdir("results/setfit")
+    if not os.path.isdir("results/fastfit"):
+        os.mkdir("results/fastfit")
     if not os.path.isdir("data-splits"):
         os.mkdir("data-splits")
 

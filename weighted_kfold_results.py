@@ -18,7 +18,7 @@ def _calculate_weighted_metrics(folder, experiment, reflection, variation, k):
         print("###############")
         return
     else:
-        assert len(paths) == k, f"{experiment}, {reflection}, {variation}, num_folds: {len(paths)}, {paths}"  # each call of calculate_weighted_metrics should be for the ten folds for each experiment variation
+        assert len(paths) == k, f"Did you change the k in the call to weighted_kfold_metrics()? Debug: {experiment}, {reflection}, {variation}, num_folds: {len(paths)}, {paths}"  # each call of calculate_weighted_metrics should be for the ten folds for each experiment variation
 
     # detect length of confusion matrix and accuracy row
     with open(paths[0], "r", encoding="utf-8") as p:

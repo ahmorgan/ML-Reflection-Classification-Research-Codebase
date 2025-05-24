@@ -157,7 +157,7 @@ train_fastfit.fastfit_experiment(
     hps={
         "body_learning_rate": 1e-5,
         "num_epochs": 40,
-        "batch_size": 16
+        "batch_size": 4
     },
     models=[
         "paraphrase-distilroberta-base-v2",
@@ -174,7 +174,7 @@ train_setfit.setfit_experiment(
     hps={
         "body_learning_rate": 2e-5,
         "num_epochs": 1,
-        "batch_size": 16
+        "batch_size": 4
     },
     models=[
         "paraphrase-distilroberta-base-v2",
@@ -196,7 +196,7 @@ wkf.weighted_kfold_metrics(results_folder="results/setfit",
                            variations=[
                                "80_10"
                            ],
-                           k=2
+                           k=10
                            )
 
 wkf.weighted_kfold_metrics(results_folder="results/fastfit",
@@ -210,7 +210,7 @@ wkf.weighted_kfold_metrics(results_folder="results/fastfit",
                            variations=[
                                "80_10"
                            ],
-                           k=2
+                           k=10
                            )
 
 
